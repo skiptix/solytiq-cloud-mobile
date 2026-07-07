@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Xcode
+## User settings & derived data
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+DerivedData/
+build/
+*.moved-aside
+
+## Build products
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.hmap
+
+## Swift Package Manager
+.build/
+.swiftpm/
+
+## CocoaPods / Carthage (not used, but ignored defensively)
+Pods/
+Carthage/Build/
+
+## Fastlane / secrets
+*.mobileprovision
+*.p12
+*.cer

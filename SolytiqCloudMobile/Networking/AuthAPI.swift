@@ -1,11 +1,41 @@
 import Foundation
+import UIKit
+
+/// Descriptor sent to the server on login so a signed-in device can be shown
+/// and revoked from the web (Account Settings → Mobile). Matches the `device`
+/// shape read by `backend/src/routes/auth.ts`.
+struct DeviceInfo: Encodable {
+    var name: String
+    var model: String
+    var osVersion: String
+    var appVersion: String
+
+    static func current() -> DeviceInfo {
+        let d = UIDevice.current
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = info?["CFBundleVersion"] as? String
+        let version = (build?.isEmpty == false) ? "\(short) (\(build!))" : short
+        return DeviceInfo(
+            name: d.name,
+            model: d.model,
+            osVersion: "\(d.systemName) \(d.systemVersion)",
+            appVersion: version
+        )
+    }
+}
 
 struct AuthAPI {
     let client = APIClient.shared
 
+    /// Marks a request as coming from the mobile app so the server registers a
+    /// revocable `mobile_connections` row and gates it behind the admin's
+    /// instance-wide "allow mobile app" setting.
+    static let clientTag = "mobile"
+
     struct RegisterBody: Encodable { var username, email, password: String; var fullName: String?; var setupToken: String? }
-    struct LoginBody: Encodable { var username: String?; var email: String?; var password: String }
-    struct TwoFAVerifyBody: Encodable { var pendingToken: String; var code: String }
+    struct LoginBody: Encodable { var username: String?; var email: String?; var password: String; var client: String?; var device: DeviceInfo? }
+    struct TwoFAVerifyBody: Encodable { var pendingToken: String; var code: String; var client: String?; var device: DeviceInfo? }
     struct ChangePasswordBody: Encodable { var currentPassword: String; var newPassword: String }
     struct TwoFACodeBody: Encodable { var code: String }
 
@@ -22,11 +52,15 @@ struct AuthAPI {
     }
 
     func login(username: String, password: String) async throws -> APIAuthResponse {
-        try await client.request("/auth/login", method: "POST", body: LoginBody(username: username, email: nil, password: password))
+        try await client.request("/auth/login", method: "POST",
+                                  body: LoginBody(username: username, email: nil, password: password,
+                                                  client: AuthAPI.clientTag, device: DeviceInfo.current()))
     }
 
     func verify2FA(pendingToken: String, code: String) async throws -> APIAuthResponse {
-        try await client.request("/auth/2fa/verify", method: "POST", body: TwoFAVerifyBody(pendingToken: pendingToken, code: code))
+        try await client.request("/auth/2fa/verify", method: "POST",
+                                  body: TwoFAVerifyBody(pendingToken: pendingToken, code: code,
+                                                        client: AuthAPI.clientTag, device: DeviceInfo.current()))
     }
 
     func me() async throws -> AppUser {
