@@ -28,6 +28,10 @@ struct APIAuthResponse: Codable {
     var user: APIUserDTO?
     var requires2FA: Bool?
     var pendingToken: String?
+    /// Id of the `mobile_connections` row the server created for this device
+    /// (server mode only). Persisted so the app knows which listed connection
+    /// is "this device".
+    var connectionId: String?
 }
 
 struct APITaskDTO: Codable {

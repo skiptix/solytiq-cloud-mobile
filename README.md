@@ -64,7 +64,7 @@ SolytiqCloudMobile/
 
 **Key decision: a single `DataStore`, not per-mode view code.** Every screen calls the same `store.tasks()` / `store.createTask()` / etc. regardless of mode — `DataStore` is the only thing that knows whether it's reading SwiftData or calling the network. This is what makes "100% local, limited features" and "full server sync" the *same* codebase instead of two apps glued together.
 
-**Auth:** the backend authenticates with a bearer JWT (`Authorization: Bearer <token>`), not cookies — ideal for a native client. The token and server URL live in the Keychain; nothing sensitive touches `UserDefaults`.
+**Auth:** the backend authenticates with a bearer JWT (`Authorization: Bearer <token>`), not cookies — ideal for a native client. The token and server URL live in the Keychain; nothing sensitive touches `UserDefaults`. On sign-in the app registers itself as a **device connection** on the server (sending its device name / model / OS), and the token is bound to that connection — so you can review and revoke this device from the web (**Account Settings → Mobile**), and an admin can allow or block the mobile app for the whole instance (**Settings → Mobile**). A revoked or blocked device is signed out on its next request and drops back to the mode picker.
 
 **Local storage:** SwiftData models mirror the server's soft-delete design (`isTrashed` / `trashedAt` flags rather than hard deletes) so Trash/Restore behaves identically in both modes, including a 30-day auto-purge that runs at launch.
 

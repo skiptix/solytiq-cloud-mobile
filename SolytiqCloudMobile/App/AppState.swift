@@ -42,6 +42,17 @@ final class AppState: ObservableObject {
         accentPaletteIndex = defaults.integer(forKey: "sc.palette")
         localUsername = defaults.string(forKey: "sc.localUsername") ?? "You"
         localProfileImageBase64 = defaults.string(forKey: "sc.localAvatar")
+
+        // The server revoked this device (connection removed, or admin disabled
+        // mobile access instance-wide) — sign out and return to the mode picker.
+        NotificationCenter.default.addObserver(forName: .scSessionInvalidated, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in await self?.handleSessionInvalidated() }
+        }
+    }
+
+    private func handleSessionInvalidated() async {
+        guard mode == .server, currentUser != nil else { return }
+        await signOutOfServer()
     }
 
     var metrics: SCMetrics {

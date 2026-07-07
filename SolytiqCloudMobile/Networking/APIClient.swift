@@ -44,6 +44,14 @@ actor APIClient {
         self.token = token
     }
 
+    /// Posts `.scSessionInvalidated` so `AppState` can sign out of the server,
+    /// but only when a token is actually set — i.e. an established session was
+    /// revoked/disabled, not a failed sign-in attempt during the connect flow.
+    private func notifySessionInvalidated() {
+        guard token != nil else { return }
+        NotificationCenter.default.post(name: .scSessionInvalidated, object: nil)
+    }
+
     /// Normalizes whatever the user typed ("myhost", "myhost:8080", full URL)
     /// into a proper base URL with an `/api` suffix stripped (each call adds
     /// its own path), defaulting to https when no scheme is given.
@@ -98,12 +106,20 @@ actor APIClient {
             throw APIError.server(status: 0, message: "No response from server.")
         }
 
-        if http.statusCode == 401 { throw APIError.unauthorized }
+        if http.statusCode == 401 {
+            notifySessionInvalidated()
+            throw APIError.unauthorized
+        }
 
         guard (200...299).contains(http.statusCode) else {
             let message = (try? JSONDecoder().decode(ServerErrorEnvelope.self, from: data))?.error
                 ?? String(data: data, encoding: .utf8)
                 ?? "Server returned status \(http.statusCode)."
+            // 403 during an active session means the admin disabled the mobile
+            // app instance-wide — drop back to the mode picker like a revoke.
+            if http.statusCode == 403 && message.range(of: "mobile access", options: .caseInsensitive) != nil {
+                notifySessionInvalidated()
+            }
             throw APIError.server(status: http.statusCode, message: message)
         }
 
@@ -122,6 +138,13 @@ actor APIClient {
 }
 
 private struct ServerErrorEnvelope: Decodable { let error: String }
+
+extension Notification.Name {
+    /// Fired when the server rejects an authenticated request because the
+    /// device connection was revoked (401) or mobile access was disabled
+    /// instance-wide (403). `AppState` observes this to sign out.
+    static let scSessionInvalidated = Notification.Name("sc.sessionInvalidated")
+}
 
 /// Type-erasing wrapper so `request(body:)` can accept any Encodable.
 private struct AnyEncodable: Encodable {
