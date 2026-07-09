@@ -3,6 +3,8 @@ import SwiftUI
 struct ListDetailView: View {
     @EnvironmentObject var store: DataStore
     @EnvironmentObject var router: Router
+    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var sync: SyncEngine
     @Environment(\.dismiss) private var dismiss
 
     var listId: String
@@ -11,6 +13,9 @@ struct ListDetailView: View {
     @State private var newSectionName = ""
     @State private var confirmDelete = false
     @State private var showEdit = false
+    @State private var showSaveTemplate = false
+    @State private var templateName = ""
+    @State private var templateSavedBanner = false
 
     var body: some View {
         ScrollView {
@@ -40,6 +45,12 @@ struct ListDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button("Edit List", systemImage: "pencil") { showEdit = true }
+                    if appState.mode == .server {
+                        Button("Save as Template", systemImage: "square.on.square") {
+                            templateName = list?.name ?? ""
+                            showSaveTemplate = true
+                        }
+                    }
                     Button("Delete List", systemImage: "trash", role: .destructive) { confirmDelete = true }
                 } label: { Image(systemName: "ellipsis.circle") }
             }
@@ -49,6 +60,25 @@ struct ListDetailView: View {
             Button("Add") { Task { await addSection() } }
             Button("Cancel", role: .cancel) { newSectionName = "" }
         }
+        .alert("Save as Template", isPresented: $showSaveTemplate) {
+            TextField("Template name", text: $templateName)
+            Button("Save") {
+                Task {
+                    let name = templateName.trimmingCharacters(in: .whitespaces)
+                    if (try? await store.saveAsTemplate(type: "list", sourceId: listId,
+                                                         name: name.isEmpty ? nil : name,
+                                                         description: nil, isShared: false)) != nil {
+                        templateSavedBanner = true
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Snapshots this list's sections and tasks (dates become relative) so you can reuse it from Add → From Template.")
+        }
+        .alert("Template saved", isPresented: $templateSavedBanner) {
+            Button("OK") {}
+        }
         .sheet(isPresented: $showEdit) {
             if let list { EditListSheet(list: list) { await reload() } }
         }
@@ -57,6 +87,12 @@ struct ListDetailView: View {
         }
         .task { await reload() }
         .refreshable { await reload() }
+        .onChange(of: sync.revision) { _, _ in
+            Task { await reload() }
+        }
+        .onChange(of: store.localRevision) { _, _ in
+            Task { await reload() }
+        }
     }
 
     private func hero(_ list: AppList) -> some View {

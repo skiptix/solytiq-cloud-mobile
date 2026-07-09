@@ -4,6 +4,7 @@ struct DashboardView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var store: DataStore
     @EnvironmentObject var router: Router
+    @EnvironmentObject var sync: SyncEngine
 
     @State private var allTasks: [AppTask] = []
     @State private var filterPush: DashboardFilterPayload?
@@ -83,6 +84,12 @@ struct DashboardView: View {
             }
             .refreshable { await reload() }
             .task { await reload() }
+            .onChange(of: sync.revision) { _, _ in
+                Task { await reload() }
+            }
+            .onChange(of: store.localRevision) { _, _ in
+                Task { await reload() }
+            }
         }
     }
 

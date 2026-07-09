@@ -16,6 +16,7 @@ private struct CalendarChip: Identifiable {
 struct CalendarView: View {
     @EnvironmentObject var store: DataStore
     @EnvironmentObject var router: Router
+    @EnvironmentObject var sync: SyncEngine
 
     @State private var tasks: [AppTask] = []
     @State private var meetings: [AppMeeting] = []
@@ -86,6 +87,17 @@ struct CalendarView: View {
             .sheet(item: $editingMeeting) { m in MeetingSheet(existing: m, presetDate: nil) }
             .task { await reload() }
             .refreshable { await reload() }
+            // Tasks/timelines live in the sync cache (revision); meetings are a
+            // signal entity and refetch when their counter bumps.
+            .onChange(of: sync.revision) { _, _ in
+                Task { await reload() }
+            }
+            .onChange(of: store.localRevision) { _, _ in
+                Task { await reload() }
+            }
+            .onChange(of: sync.entityRevisions) { _, _ in
+                Task { await reload() }
+            }
         }
     }
 

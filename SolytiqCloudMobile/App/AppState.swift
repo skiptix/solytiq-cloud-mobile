@@ -10,6 +10,12 @@ enum AppMode: String, Codable, Hashable {
 
 @MainActor
 final class AppState: ObservableObject {
+    /// The delta-sync engine for server mode (bootstrap + SSE nudges + delta
+    /// pulls, mirroring the web frontend's useSyncStore). Owned here because
+    /// AppState owns the server session lifecycle; injected into the view
+    /// tree as its own EnvironmentObject so screens observe it directly.
+    let sync = SyncEngine()
+
     @Published var mode: AppMode?
     @Published var currentUser: AppUser?
     @Published var serverURL: URL?
@@ -27,7 +33,12 @@ final class AppState: ObservableObject {
     @Published var localProfileImageBase64: String?
 
     @Published var isRestoringSession = true
-    @Published var currentWorkspaceId: String?
+    @Published var currentWorkspaceId: String? {
+        didSet {
+            guard mode == .server, currentWorkspaceId != oldValue else { return }
+            sync.workspaceChanged(currentWorkspaceId)
+        }
+    }
     @Published var workspaces: [AppWorkspace] = []
 
     private let defaults = UserDefaults.standard
@@ -47,6 +58,23 @@ final class AppState: ObservableObject {
         // mobile access instance-wide) — sign out and return to the mode picker.
         NotificationCenter.default.addObserver(forName: .scSessionInvalidated, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in await self?.handleSessionInvalidated() }
+        }
+
+        // A `workspace` sync signal means membership/visibility changed — the
+        // workspace list (and possibly access to the current one) is stale.
+        sync.onWorkspacesChanged = { [weak self] in
+            await self?.reloadWorkspaces()
+        }
+    }
+
+    /// Refresh the workspace list; if the current workspace disappeared (we
+    /// were removed / it was deleted), fall back to another one — the didSet
+    /// on `currentWorkspaceId` re-bootstraps the sync engine.
+    func reloadWorkspaces() async {
+        guard mode == .server else { return }
+        workspaces = (try? await WorkspacesAPI().list()) ?? workspaces
+        if let current = currentWorkspaceId, !workspaces.contains(where: { $0.id == current }) {
+            currentWorkspaceId = workspaces.first(where: { $0.role == "owner" })?.id ?? workspaces.first?.id
         }
     }
 
@@ -95,6 +123,7 @@ final class AppState: ObservableObject {
             featureFlags = try? await AuthAPI().featureFlags()
             workspaces = (try? await WorkspacesAPI().list()) ?? []
             currentWorkspaceId = workspaces.first(where: { $0.role == "owner" })?.id ?? workspaces.first?.id
+            sync.start(baseURL: url, token: token, workspaceId: currentWorkspaceId)
         } catch {
             // Token expired or server unreachable — drop back to the mode
             // picker rather than silently failing inside the shell.
@@ -119,9 +148,11 @@ final class AppState: ObservableObject {
         featureFlags = try? await AuthAPI().featureFlags()
         workspaces = (try? await WorkspacesAPI().list()) ?? []
         currentWorkspaceId = workspaces.first(where: { $0.role == "owner" })?.id ?? workspaces.first?.id
+        sync.start(baseURL: url, token: token, workspaceId: currentWorkspaceId)
     }
 
     func signOutOfServer() async {
+        sync.stop()
         KeychainStore.remove(KeychainStore.Key.authToken)
         KeychainStore.remove(KeychainStore.Key.serverURL)
         await APIClient.shared.configure(baseURL: nil, token: nil)

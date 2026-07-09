@@ -12,6 +12,7 @@ enum SheetRoute: Identifiable {
     case addTask(listId: String?, sectionId: String?, presetDeadline: String?)
     case editTask(AppTask)
     case addChoice
+    case templates
     case addList(folderId: String?)
     case addFolder
     case settings
@@ -31,6 +32,7 @@ enum SheetRoute: Identifiable {
         case .addTask: return "addTask"
         case .editTask(let t): return "editTask-\(t.id)"
         case .addChoice: return "addChoice"
+        case .templates: return "templates"
         case .addList: return "addList"
         case .addFolder: return "addFolder"
         case .settings: return "settings"

@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 struct FilesView: View {
     @EnvironmentObject var store: DataStore
     @EnvironmentObject var router: Router
+    @EnvironmentObject var sync: SyncEngine
     @State private var files: [AppFileItem] = []
     @State private var showImporter = false
     @State private var uploading = false
@@ -51,6 +52,9 @@ struct FilesView: View {
             }
             .task { await reload() }
             .refreshable { await reload() }
+            .onChange(of: sync.entityRevisions) { _, _ in
+                Task { await reload() }
+            }
         }
     }
 

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AddChoiceSheet: View {
     @EnvironmentObject var router: Router
+    @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -16,13 +17,18 @@ struct AddChoiceSheet: View {
                 choiceRow(icon: "chart.xyaxis.line", color: Color(hex: "#0ea5e9"), title: "New Timeline", subtitle: "Track milestones chronologically") {
                     open { router.sheet = .addTimeline }
                 }
+                if appState.mode == .server {
+                    choiceRow(icon: "square.on.square", color: Color(hex: "#9d8dff"), title: "From Template", subtitle: "Start from a saved list or timeline") {
+                        open { router.sheet = .templates }
+                    }
+                }
                 Spacer()
             }
             .padding(20)
             .navigationTitle("Add")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .presentationDetents([.height(320)])
+        .presentationDetents([.height(appState.mode == .server ? 390 : 320)])
     }
 
     private func open(_ action: @escaping () -> Void) {
