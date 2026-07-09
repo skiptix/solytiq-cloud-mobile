@@ -3,6 +3,7 @@ import SwiftUI
 struct FolderDashboardView: View {
     @EnvironmentObject var store: DataStore
     @EnvironmentObject var router: Router
+    @EnvironmentObject var sync: SyncEngine
     @Environment(\.dismiss) private var dismiss
 
     var folderId: String
@@ -72,6 +73,12 @@ struct FolderDashboardView: View {
         }
         .task { await reload() }
         .refreshable { await reload() }
+        .onChange(of: sync.revision) { _, _ in
+            Task { await reload() }
+        }
+        .onChange(of: store.localRevision) { _, _ in
+            Task { await reload() }
+        }
     }
 
     private func reload() async {

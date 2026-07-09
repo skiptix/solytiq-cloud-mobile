@@ -39,6 +39,8 @@ extension DataStore {
             case .timeline: try? await trashAPI.restoreTimeline(entryId: entry.id)
             case .milestone: break
             }
+            // The restored item comes back through the delta pull.
+            sync.noteMutationSettled()
             return
         }
         switch entry.kind {
@@ -64,6 +66,7 @@ extension DataStore {
             case .timeline: try? await trashAPI.deleteTimelineForever(entryId: entry.id)
             case .milestone: break
             }
+            sync.noteMutationSettled()
             return
         }
         switch entry.kind {
@@ -81,7 +84,11 @@ extension DataStore {
     }
 
     func emptyTrash() async {
-        if isServer { try? await trashAPI.emptyAll(); return }
+        if isServer {
+            try? await trashAPI.emptyAll()
+            sync.noteMutationSettled()
+            return
+        }
         for e in await trashEntries() { await deleteForever(e) }
     }
 }

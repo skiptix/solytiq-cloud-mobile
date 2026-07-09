@@ -3,6 +3,7 @@ import SwiftUI
 struct TimelinesView: View {
     @EnvironmentObject var store: DataStore
     @EnvironmentObject var router: Router
+    @EnvironmentObject var sync: SyncEngine
     @State private var timelines: [AppTimeline] = []
 
     var body: some View {
@@ -29,6 +30,12 @@ struct TimelinesView: View {
         }
         .task { await reload() }
         .refreshable { await reload() }
+        .onChange(of: sync.revision) { _, _ in
+            Task { await reload() }
+        }
+        .onChange(of: store.localRevision) { _, _ in
+            Task { await reload() }
+        }
     }
 
     private func card(_ tl: AppTimeline) -> some View {
@@ -57,11 +64,16 @@ struct TimelinesView: View {
 struct TimelineDetailView: View {
     @EnvironmentObject var store: DataStore
     @EnvironmentObject var router: Router
+    @EnvironmentObject var appState: AppState
+    @EnvironmentObject var sync: SyncEngine
     @Environment(\.dismiss) private var dismiss
     var timelineId: String
     @State private var timeline: AppTimeline?
     @State private var confirmDelete = false
     @State private var showEdit = false
+    @State private var showSaveTemplate = false
+    @State private var templateName = ""
+    @State private var templateSavedBanner = false
 
     var body: some View {
         ScrollView {
@@ -98,6 +110,12 @@ struct TimelineDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button("Edit Timeline", systemImage: "pencil") { showEdit = true }
+                    if appState.mode == .server {
+                        Button("Save as Template", systemImage: "square.on.square") {
+                            templateName = timeline?.name ?? ""
+                            showSaveTemplate = true
+                        }
+                    }
                     Button("Delete Timeline", systemImage: "trash", role: .destructive) { confirmDelete = true }
                 } label: { Image(systemName: "ellipsis.circle") }
             }
@@ -105,11 +123,36 @@ struct TimelineDetailView: View {
         .sheet(isPresented: $showEdit) {
             if let timeline { EditTimelineSheet(timeline: timeline) { await reload() } }
         }
+        .alert("Save as Template", isPresented: $showSaveTemplate) {
+            TextField("Template name", text: $templateName)
+            Button("Save") {
+                Task {
+                    let name = templateName.trimmingCharacters(in: .whitespaces)
+                    if (try? await store.saveAsTemplate(type: "timeline", sourceId: timelineId,
+                                                         name: name.isEmpty ? nil : name,
+                                                         description: nil, isShared: false)) != nil {
+                        templateSavedBanner = true
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Snapshots this timeline's milestones (dates become relative) so you can reuse it from Add → From Template.")
+        }
+        .alert("Template saved", isPresented: $templateSavedBanner) {
+            Button("OK") {}
+        }
         .confirmDelete(isPresented: $confirmDelete, title: "Delete Timeline?", message: "\"\(timeline?.name ?? "")\" will move to Trash.") {
             Task { await store.deleteTimeline(id: timelineId); dismiss() }
         }
         .task { await reload() }
         .refreshable { await reload() }
+        .onChange(of: sync.revision) { _, _ in
+            Task { await reload() }
+        }
+        .onChange(of: store.localRevision) { _, _ in
+            Task { await reload() }
+        }
     }
 
     private func sortedMilestones(_ ms: [AppMilestone]) -> [AppMilestone] {

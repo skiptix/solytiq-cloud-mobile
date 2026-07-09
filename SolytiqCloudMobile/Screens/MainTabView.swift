@@ -40,6 +40,8 @@ struct MainTabView: View {
             EditTaskSheet(mode: .edit(task))
         case .addChoice:
             AddChoiceSheet()
+        case .templates:
+            TemplatesSheet()
         case .addList(let folderId):
             AddListSheet(folderId: folderId)
         case .addFolder:

@@ -4,6 +4,7 @@ struct ListsView: View {
     @EnvironmentObject var store: DataStore
     @EnvironmentObject var router: Router
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var sync: SyncEngine
 
     @State private var lists: [AppList] = []
     @State private var folders: [AppFolder] = []
@@ -68,6 +69,15 @@ struct ListsView: View {
             }
             .task { await reload() }
             .refreshable { await reload() }
+            .onChange(of: sync.revision) { _, _ in
+                Task { await reload() }
+            }
+            .onChange(of: store.localRevision) { _, _ in
+                Task { await reload() }
+            }
+            .onChange(of: appState.currentWorkspaceId) { _, _ in
+                Task { await reload() }
+            }
         }
     }
 

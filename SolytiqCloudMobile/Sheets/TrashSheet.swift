@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TrashSheet: View {
     @EnvironmentObject var store: DataStore
+    @EnvironmentObject var sync: SyncEngine
     @Environment(\.dismiss) private var dismiss
 
     @State private var entries: [AppTrashEntry] = []
@@ -54,6 +55,12 @@ struct TrashSheet: View {
                 Task { await store.emptyTrash(); await reload() }
             }
             .task { await reload() }
+            .onChange(of: sync.entityRevisions) { _, _ in
+                Task { await reload() }
+            }
+            .onChange(of: store.localRevision) { _, _ in
+                Task { await reload() }
+            }
         }
     }
 

@@ -169,6 +169,28 @@ struct AppFileItem: Identifiable, Codable, Hashable {
     var expiresAt: String?
 }
 
+/// A server-side snapshot of a list's or timeline's full structure that can
+/// be materialized into a fresh copy at any time. Server mode only.
+struct AppTemplate: Identifiable, Codable, Hashable {
+    enum Kind: String, Codable { case list, timeline }
+
+    var id: String
+    var type: Kind
+    var name: String
+    var description: String?
+    var emoji: String?
+    var colorHex: String
+    /// Visible read-only to every other user of the instance (a public
+    /// toggle, not a share link).
+    var isShared: Bool
+    var isOwner: Bool
+    var ownerName: String?
+    var sectionCount: Int
+    var taskCount: Int
+    var milestoneCount: Int
+    var createdAt: Date
+}
+
 struct AppUser: Identifiable, Codable, Hashable {
     var id: String
     var username: String

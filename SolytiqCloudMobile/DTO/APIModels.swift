@@ -220,6 +220,36 @@ struct APIFileDTO: Codable {
     }
 }
 
+struct APITemplateDTO: Codable {
+    struct Summary: Codable {
+        var sectionCount: Int?
+        var taskCount: Int?
+        var milestoneCount: Int?
+    }
+
+    var id: String
+    var type: String                 // "list" | "timeline"
+    var name: String
+    var description: String?
+    var emoji: String?
+    var color: String?
+    var colorBg: String?
+    var isShared: Bool
+    var isOwner: Bool
+    var ownerName: String?
+    var createdAt: String?
+    var summary: Summary?
+
+    func toApp() -> AppTemplate {
+        AppTemplate(id: id, type: type == "timeline" ? .timeline : .list, name: name,
+                     description: description, emoji: emoji, colorHex: color ?? "#5e4dbb",
+                     isShared: isShared, isOwner: isOwner, ownerName: ownerName,
+                     sectionCount: summary?.sectionCount ?? 0, taskCount: summary?.taskCount ?? 0,
+                     milestoneCount: summary?.milestoneCount ?? 0,
+                     createdAt: ServerDate.parse(createdAt) ?? .now)
+    }
+}
+
 struct APIChatMessageDTO: Codable {
     var id: IntOrString?
     var role: String

@@ -4,6 +4,7 @@ import SwiftData
 struct RootView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var router = Router()
     @State private var store: DataStore?
 
@@ -19,6 +20,7 @@ struct RootView: View {
                 MainTabView()
                     .environmentObject(store)
                     .environmentObject(router)
+                    .environmentObject(appState.sync)
                     .fullScreenCover(isPresented: $appState.showConnectFlow) {
                         ConnectServerView()
                     }
@@ -40,6 +42,13 @@ struct RootView: View {
             if let store { store.purgeExpiredLocalTrash() }
             router.tab = .home
             router.listsPath = []
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // The SSE stream dies while backgrounded and its nudges are
+            // missed — reconnect and reconcile as soon as we're active again.
+            if phase == .active && appState.mode == .server {
+                appState.sync.appBecameActive()
+            }
         }
         .animation(.easeInOut(duration: 0.25), value: appState.mode)
         .animation(.easeInOut(duration: 0.25), value: appState.isRestoringSession)

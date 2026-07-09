@@ -25,6 +25,8 @@ The app has two independent modes, chosen on first launch (and switchable later 
 - **Calendar** — month & week views, tasks + meetings + milestones on one calendar, drag-and-drop rescheduling
 - **Lists** — folders, sections, tasks with priority/deadline/notes/subitems, sublists (a task can link to its own checklist)
 - **Timelines** — milestone tracking with status (upcoming/in progress/done)
+- **Templates** (server mode) — save any list or timeline as a reusable snapshot (dates stored as relative offsets), browse your own + instance-shared templates, and create a new list/timeline from one via **Add → From Template**
+- **Real-time sync** (server mode) — a collaborator's edit appears live on your phone within a second, powered by the same cursor-based delta-sync engine the web app uses (see Architecture)
 - **Trash** — 30-day recoverable soft-delete for tasks, lists, folders and timelines, in both modes
 - **Settings** — profile, appearance (accent color / corner radius / density), and mode switching always available; **Files**, **Sol AI assistant**, **Workspaces**, **2FA**, and **Users** appear only once connected to a server
 - Native SF Symbols, SwiftUI `NavigationStack`, SwiftData persistence, Keychain-backed auth token storage — no third-party dependencies
@@ -56,13 +58,24 @@ SolytiqCloudMobile/
 ├── Models/         SwiftData @Model types (local store) + plain domain structs the UI consumes
 ├── DTO/            Codable wire types matching the solytiq-cloud REST API responses
 ├── Networking/     APIClient (bearer-JWT REST client) + one file per resource (auth, tasks, lists, …)
-├── Repositories/   DataStore — the single façade the UI calls; branches to SwiftData or REST per AppState.mode
+│                   SyncAPI (bootstrap/delta wire types) + SSEClient (hand-rolled EventSource for /api/events)
+├── Repositories/   DataStore — the single façade the UI calls; branches to SwiftData or the sync cache per AppState.mode
+│                   SyncEngine — cursor, in-memory server cache, delta application, realtime nudges
 ├── Components/     Reusable views: TaskRow, Card, StatCard, QuickAddBar, the floating glass tab bar
 ├── Screens/        One folder per top-level screen
 └── Sheets/         Every `.sheet` presentation (add/edit task, add list, settings, trash, AI chat, …)
 ```
 
-**Key decision: a single `DataStore`, not per-mode view code.** Every screen calls the same `store.tasks()` / `store.createTask()` / etc. regardless of mode — `DataStore` is the only thing that knows whether it's reading SwiftData or calling the network. This is what makes "100% local, limited features" and "full server sync" the *same* codebase instead of two apps glued together.
+**Key decision: a single `DataStore`, not per-mode view code.** Every screen calls the same `store.tasks()` / `store.createTask()` / etc. regardless of mode — `DataStore` is the only thing that knows whether it's reading SwiftData or the server-backed sync cache. This is what makes "100% local, limited features" and "full server sync" the *same* codebase instead of two apps glued together.
+
+**Server mode is driven by the backend's delta-sync engine** (`/api/sync/*` + `/api/events`, the same pipeline the web frontend uses):
+
+1. On sign-in (and on every workspace switch) the app calls `GET /api/sync/bootstrap` — full state plus a **cursor** in one request — and hydrates an in-memory cache (`SyncEngine`). All reads are served from that cache, so navigating the app is instant and does zero network I/O.
+2. An SSE stream (`GET /api/events`) delivers cursor-tagged **nudge frames** whenever anything a user can see changes — including collaborators' edits in shared workspaces. A nudge triggers `GET /api/sync/delta?since=<cursor>`, which returns only the net changes after the cursor, re-serialized fresh and access-checked server-side (the frame itself is never trusted).
+3. Every successful write also schedules a debounced (~300 ms) delta pull, so optimistic local updates reconcile with what the server actually committed without waiting for a realtime frame.
+4. Returning to the foreground reconnects the stream and reconciles once; a cursor that fell behind the server's retention window triggers a clean re-bootstrap (`reset`); an admin **Nuke** or device revocation signs the device out immediately.
+
+If the bootstrap endpoint is unavailable (e.g. an older server), `DataStore` transparently falls back to the classic per-screen REST fetches — the app stays fully usable, just without live updates.
 
 **Auth:** the backend authenticates with a bearer JWT (`Authorization: Bearer <token>`), not cookies — ideal for a native client. The token and server URL live in the Keychain; nothing sensitive touches `UserDefaults`. On sign-in the app registers itself as a **device connection** on the server (sending its device name / model / OS), and the token is bound to that connection — so you can review and revoke this device from the web (**Account Settings → Mobile**), and an admin can allow or block the mobile app for the whole instance (**Settings → Mobile**). A revoked or blocked device is signed out on its next request and drops back to the mode picker.
 
