@@ -8,11 +8,35 @@ struct FilesAPI {
         return try await client.request("/files", as: R.self).files.map { $0.toApp() }
     }
 
-    struct ShareBody: Encodable { var isPublic: Bool?; var password: String?; var expiresAt: String? }
-    func setShare(id: String, isPublic: Bool?, password: String?, expiresAt: String?) async throws -> AppFileItem {
+    /// The backend's `PUT /api/files/:id` distinguishes "field absent" (leave
+    /// untouched) from "field present as null" (clear it). Swift's synthesized
+    /// encoder omits nil optionals entirely, so a nil expiry could never *clear*
+    /// an expiry. This manual encoder makes that difference explicit: pass
+    /// `clearExpiry: true` to send `expiresAt: null` (remove), or an ISO string
+    /// to set it; leave both nil to leave expiry as-is.
+    struct ShareBody: Encodable {
+        var isPublic: Bool?
+        var password: String?
+        var expiresAt: String?
+        var clearExpiry: Bool = false
+
+        enum CodingKeys: String, CodingKey { case isPublic, password, expiresAt }
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encodeIfPresent(isPublic, forKey: .isPublic)
+            try c.encodeIfPresent(password, forKey: .password)
+            if clearExpiry {
+                try c.encodeNil(forKey: .expiresAt)
+            } else {
+                try c.encodeIfPresent(expiresAt, forKey: .expiresAt)
+            }
+        }
+    }
+
+    func setShare(id: String, isPublic: Bool?, password: String?, expiresAt: String?, clearExpiry: Bool = false) async throws -> AppFileItem {
         struct R: Decodable { var file: APIFileDTO }
         return try await client.request("/files/\(id)", method: "PUT",
-                                         body: ShareBody(isPublic: isPublic, password: password, expiresAt: expiresAt), as: R.self).file.toApp()
+                                         body: ShareBody(isPublic: isPublic, password: password, expiresAt: expiresAt, clearExpiry: clearExpiry), as: R.self).file.toApp()
     }
 
     func delete(id: String) async throws {
@@ -48,7 +72,28 @@ struct FilesAPI {
         return decoded.file.toApp()
     }
 
-    func downloadURL(id: String, serverBaseURL: URL) -> URL {
-        serverBaseURL.appendingPathComponent("api/files/\(id)/download")
+    /// Authenticated owner download. The backend serves file bytes at
+    /// `GET /api/files/:id/preview` behind the JWT middleware — there is no
+    /// public `/download` route for an owner's own file (that only exists for
+    /// share tokens), so opening a bare URL in Safari 404s / 401s. We fetch the
+    /// bytes here with the bearer token and hand back a local temp file the UI
+    /// can share or preview.
+    func download(id: String, fileName: String, serverBaseURL: URL, token: String?) async throws -> URL {
+        var request = URLRequest(url: serverBaseURL.appendingPathComponent("api/files/\(id)/preview"))
+        if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let message = (try? JSONDecoder().decode([String: String].self, from: data))?["error"] ?? "Download failed."
+            throw APIError.server(status: (response as? HTTPURLResponse)?.statusCode ?? 0, message: message)
+        }
+
+        // Write to a uniquely-scoped temp dir so files with the same name don't
+        // clobber each other, preserving the original filename for the share sheet.
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dest = dir.appendingPathComponent(fileName.isEmpty ? "download" : fileName)
+        try data.write(to: dest)
+        return dest
     }
 }

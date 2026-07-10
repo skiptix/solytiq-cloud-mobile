@@ -17,7 +17,7 @@ struct TimelinesView: View {
                             .buttonStyle(.plain)
                     }
                 }
-                .padding(.horizontal, 18).padding(.top, 12)
+                .padding(.horizontal, 18).padding(.top, 12).padding(.bottom, 110)
             }
         }
         .background(SCColor.page)
@@ -98,7 +98,7 @@ struct TimelineDetailView: View {
                     }
                     .padding(.horizontal, 24).padding(.top, 8)
                 }
-                .padding(.bottom, 40)
+                .padding(.bottom, 110)
             } else {
                 ProgressView().padding(.top, 60)
             }

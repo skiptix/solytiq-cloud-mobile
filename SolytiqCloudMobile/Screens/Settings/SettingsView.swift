@@ -61,11 +61,11 @@ struct SettingsView: View {
             HStack {
                 PhotosPicker(selection: $photoItem, matching: .images) {
                     ZStack {
-                        Circle().fill(LinearGradient(colors: [Color(hex: "#b59cff"), SCColor.primary], startPoint: .topLeading, endPoint: .bottomTrailing))
                         if let avatarImage {
+                            Circle().fill(LinearGradient(colors: [Color(hex: "#b59cff"), SCColor.primary], startPoint: .topLeading, endPoint: .bottomTrailing))
                             avatarImage.resizable().scaledToFill().clipShape(Circle())
                         } else {
-                            Text(initials).font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
+                            ProfileAvatarView(base64DataURL: storedAvatar, initials: initials, size: 64, fontSize: 20)
                         }
                     }
                     .frame(width: 64, height: 64)
@@ -86,21 +86,12 @@ struct SettingsView: View {
 
     private var appearanceSection: some View {
         Section("Appearance") {
-            Picker("Accent", selection: Binding(get: { appState.accentPaletteIndex }, set: { appState.updateAppearance(paletteIndex: $0) })) {
-                ForEach(0..<AppState.accentPalettes.count, id: \.self) { i in
-                    HStack { Circle().fill(Color(hex: AppState.accentPalettes[i][0])).frame(width: 14, height: 14); Text(paletteName(i)) }.tag(i)
+            Picker("Theme", selection: Binding(get: { appState.colorSchemePref }, set: { appState.updateColorScheme($0) })) {
+                ForEach(SCColorSchemePreference.allCases, id: \.self) { pref in
+                    Text(pref.label).tag(pref)
                 }
             }
-            Picker("Corner style", selection: Binding(get: { appState.appearanceShape }, set: { appState.updateAppearance(shape: $0) })) {
-                Text("Sharp").tag(AppearanceShape.sharp)
-                Text("Rounded").tag(AppearanceShape.rounded)
-                Text("Bubbly").tag(AppearanceShape.bubbly)
-            }
-            Picker("Density", selection: Binding(get: { appState.appearanceDensity }, set: { appState.updateAppearance(density: $0) })) {
-                Text("Compact").tag(AppearanceDensity.compact)
-                Text("Regular").tag(AppearanceDensity.regular)
-                Text("Airy").tag(AppearanceDensity.airy)
-            }
+            .pickerStyle(.segmented)
         }
     }
 
@@ -162,7 +153,11 @@ struct SettingsView: View {
         return String(parts.prefix(2).compactMap { $0.first }).uppercased()
     }
 
-    private func paletteName(_ i: Int) -> String { ["Lavender", "Indigo", "Sage", "Rose"][safe: i] ?? "Custom" }
+    /// The persisted avatar for the active mode — the server profile image when
+    /// connected, the local avatar otherwise. Shown until a new pick replaces it.
+    private var storedAvatar: String? {
+        appState.mode == .server ? appState.currentUser?.profileImageBase64 : appState.localProfileImageBase64
+    }
 
     private func populate() {
         username = appState.localUsername
@@ -188,10 +183,6 @@ struct SettingsView: View {
             appState.updateLocalProfile(username: username, avatarBase64: appState.localProfileImageBase64)
         }
     }
-}
-
-private extension Array {
-    subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
 }
 
 struct ChangePasswordSheet: View {

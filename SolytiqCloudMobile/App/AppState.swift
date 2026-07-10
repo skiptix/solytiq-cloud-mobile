@@ -29,6 +29,8 @@ final class AppState: ObservableObject {
     @Published var appearanceShape: AppearanceShape
     @Published var appearanceDensity: AppearanceDensity
     @Published var accentPaletteIndex: Int
+    /// Theme preference (System / Light / Dark). Defaults to Light.
+    @Published var colorSchemePref: SCColorSchemePreference
     @Published var localUsername: String
     @Published var localProfileImageBase64: String?
 
@@ -51,6 +53,7 @@ final class AppState: ObservableObject {
         appearanceShape = AppearanceShape(rawValue: defaults.string(forKey: "sc.shape") ?? "") ?? .rounded
         appearanceDensity = AppearanceDensity(rawValue: defaults.string(forKey: "sc.density") ?? "") ?? .regular
         accentPaletteIndex = defaults.integer(forKey: "sc.palette")
+        colorSchemePref = SCColorSchemePreference(rawValue: defaults.string(forKey: "sc.colorScheme") ?? "") ?? .light
         localUsername = defaults.string(forKey: "sc.localUsername") ?? "You"
         localProfileImageBase64 = defaults.string(forKey: "sc.localAvatar")
 
@@ -184,5 +187,10 @@ final class AppState: ObservableObject {
         if let shape { appearanceShape = shape; defaults.set(shape.rawValue, forKey: "sc.shape") }
         if let density { appearanceDensity = density; defaults.set(density.rawValue, forKey: "sc.density") }
         if let paletteIndex { accentPaletteIndex = paletteIndex; defaults.set(paletteIndex, forKey: "sc.palette") }
+    }
+
+    func updateColorScheme(_ pref: SCColorSchemePreference) {
+        colorSchemePref = pref
+        defaults.set(pref.rawValue, forKey: "sc.colorScheme")
     }
 }

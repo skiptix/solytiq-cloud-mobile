@@ -54,16 +54,19 @@ extension DataStore {
         sync.noteMutationSettled()
     }
 
-    func setFileShare(id: String, isPublic: Bool?, password: String?, expiresAt: String?) async -> AppFileItem? {
+    func setFileShare(id: String, isPublic: Bool?, password: String?, expiresAt: String?, clearExpiry: Bool = false) async -> AppFileItem? {
         guard isServer else { return nil }
-        let file = try? await filesAPI.setShare(id: id, isPublic: isPublic, password: password, expiresAt: expiresAt)
+        let file = try? await filesAPI.setShare(id: id, isPublic: isPublic, password: password, expiresAt: expiresAt, clearExpiry: clearExpiry)
         sync.noteMutationSettled()
         return file
     }
 
-    func fileDownloadURL(id: String) -> URL? {
-        guard isServer, let url = appState.serverURL else { return nil }
-        return filesAPI.downloadURL(id: id, serverBaseURL: url)
+    /// Downloads a file's bytes (authenticated) into a local temp file the UI
+    /// can hand to a share sheet or QuickLook. Returns nil if not connected.
+    func downloadFile(_ file: AppFileItem) async throws -> URL {
+        guard isServer, let url = appState.serverURL else { throw APIError.notConnected }
+        let token = KeychainStore.get(KeychainStore.Key.authToken)
+        return try await filesAPI.download(id: file.id, fileName: file.name, serverBaseURL: url, token: token)
     }
 
     // MARK: Templates
@@ -115,14 +118,41 @@ extension DataStore {
 
     // MARK: AI assistant
 
-    func sendAIMessage(sessionId: String?, content: String) async -> (sessionId: String, reply: AppChatMessage)? {
+    /// The one-line persona the web client also seeds the conversation with, so
+    /// Sol behaves the same on both surfaces.
+    private var aiSystemPrompt: String {
+        "You are Sol, the helpful AI assistant built into Solytiq Cloud, a self-hosted productivity suite. Help the user with their tasks, lists, timelines and schedule. Be concise and friendly."
+    }
+
+    /// Loads a session's persisted transcript (used when reopening the chat).
+    func aiHistory(sessionId: String) async -> [AppChatMessage] {
+        guard isServer else { return [] }
+        return (try? await aiAPI.history(sessionId: sessionId)) ?? []
+    }
+
+    /// Sends `content` as the next user turn. `priorMessages` is the visible
+    /// conversation (excluding the just-typed message) so the model has context.
+    /// Returns the (possibly newly created) session id and the assistant reply.
+    func sendAIMessage(sessionId: String?, priorMessages: [AppChatMessage], content: String) async -> (sessionId: String, reply: AppChatMessage)? {
         guard isServer else { return nil }
         do {
             let sid = try await sessionId ?? aiAPI.createSession()
-            let reply = try await aiAPI.send(sessionId: sid, content: content)
-            return (sid, reply)
+
+            var wire: [AIAPI.ChatMessage] = [AIAPI.ChatMessage(role: "system", content: aiSystemPrompt)]
+            wire += priorMessages
+                .filter { $0.role == "user" || $0.role == "assistant" }
+                .map { AIAPI.ChatMessage(role: $0.role, content: $0.content) }
+            wire.append(AIAPI.ChatMessage(role: "user", content: content))
+
+            // Persist the user turn, then ask for the reply, then persist it.
+            await aiAPI.saveMessage(sessionId: sid, role: "user", content: content)
+            let replyText = try await aiAPI.chat(sessionId: sid, messages: wire)
+            await aiAPI.saveMessage(sessionId: sid, role: "assistant", content: replyText)
+
+            return (sid, AppChatMessage(role: "assistant", content: replyText))
         } catch {
-            return (sessionId ?? "", AppChatMessage(role: "assistant", content: "Sorry — I couldn't reach the AI assistant: \(error.localizedDescription)"))
+            let message = (error as? APIError)?.errorDescription ?? error.localizedDescription
+            return (sessionId ?? "", AppChatMessage(role: "assistant", content: "Sorry — I couldn't reach the AI assistant: \(message)"))
         }
     }
 }

@@ -4,13 +4,14 @@ import SwiftUI
 /// matching `WelcomeScreen` in the prototype.
 struct WelcomeView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.colorScheme) private var colorScheme
     @State private var selection: AppMode?
     @State private var goToConnect = false
 
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(colors: [Color(hex: "#ede9ff"), Color(hex: "#fdf8ff"), Color(hex: "#fff0f9")],
+                LinearGradient(colors: SCGradient.backdrop(colorScheme),
                                 startPoint: .topLeading, endPoint: .bottomTrailing)
                     .ignoresSafeArea()
 
@@ -47,7 +48,7 @@ struct WelcomeView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
-                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(selection != nil ? SCColor.primary : Color(hex: "#d6d0e0")))
+                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(selection != nil ? SCColor.primary : SCColor.text4.opacity(0.5)))
                     }
                     .disabled(selection == nil)
                     .padding(.horizontal, 24)
@@ -86,15 +87,15 @@ struct WelcomeView: View {
                 }
                 Spacer()
                 ZStack {
-                    Circle().strokeBorder(active ? SCColor.primary : Color(hex: "#d6d0e0"), lineWidth: 1.5)
+                    Circle().strokeBorder(active ? SCColor.primary : SCColor.border, lineWidth: 1.5)
                         .background(Circle().fill(active ? SCColor.primary : .clear))
                     if active { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white) }
                 }
                 .frame(width: 22, height: 22)
             }
             .padding(16)
-            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(active ? Color.white : Color.white.opacity(0.55)))
-            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(active ? SCColor.primary : Color.white.opacity(0.7), lineWidth: 1.5))
+            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(active ? SCColor.card : SCColor.card.opacity(0.6)))
+            .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(active ? SCColor.primary : SCColor.border, lineWidth: 1.5))
             .shadow(color: active ? SCColor.primary.opacity(0.22) : .clear, radius: 16, y: 6)
         }
         .buttonStyle(.plain)

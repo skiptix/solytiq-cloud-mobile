@@ -27,7 +27,19 @@ struct FilesView: View {
                     }
 
                     if files.isEmpty {
-                        Card { EmptyRowView(text: uploading ? "Uploading…" : "No files yet. Tap + to upload.") }
+                        Button { showImporter = true } label: {
+                            Card {
+                                VStack(spacing: 8) {
+                                    Image(systemName: uploading ? "arrow.up.circle" : "plus.circle")
+                                        .font(.system(size: 30)).foregroundStyle(SCColor.primary)
+                                    Text(uploading ? "Uploading…" : "Tap to upload a file")
+                                        .font(.system(size: 13)).foregroundStyle(SCColor.text3)
+                                }
+                                .frame(maxWidth: .infinity).padding(.vertical, 26)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(uploading)
                     } else {
                         Card {
                             ForEach(Array(files.enumerated()), id: \.element.id) { idx, file in
@@ -47,7 +59,8 @@ struct FilesView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) { ProfileToolbarButton() }
             }
-            .fileImporter(isPresented: $showImporter, allowedContentTypes: [.item]) { result in
+            .fileImporter(isPresented: $showImporter, allowedContentTypes: [.data, .item, .content],
+                          allowsMultipleSelection: true) { result in
                 Task { await handleImport(result) }
             }
             .task { await reload() }
@@ -82,19 +95,35 @@ struct FilesView: View {
         return String(format: "%.0f KB", d / 1e3)
     }
 
-    private func handleImport(_ result: Result<URL, Error>) async {
-        guard case .success(let url) = result else { return }
-        uploading = true
-        defer { uploading = false }
-        guard url.startAccessingSecurityScopedResource() else { return }
-        defer { url.stopAccessingSecurityScopedResource() }
+    private func handleImport(_ result: Result<[URL], Error>) async {
+        errorMessage = nil
+        switch result {
+        case .failure(let error):
+            errorMessage = error.localizedDescription
+            return
+        case .success(let urls):
+            guard !urls.isEmpty else { return }
+            uploading = true
+            defer { uploading = false }
+            for url in urls {
+                await upload(url)
+            }
+            await reload()
+        }
+    }
+
+    private func upload(_ url: URL) async {
+        // Files picked from iCloud / other providers are security-scoped; we
+        // must open the scope before reading, but not every URL is scoped
+        // (e.g. an "On My iPhone" path) so a false result isn't fatal.
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         do {
             let data = try Data(contentsOf: url)
             let mime = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
             _ = try await store.uploadFile(name: url.lastPathComponent, mimeType: mime, data: data)
-            await reload()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = (error as? APIError)?.errorDescription ?? error.localizedDescription
         }
     }
 

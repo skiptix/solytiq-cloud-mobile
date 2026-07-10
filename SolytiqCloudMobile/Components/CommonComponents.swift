@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// `Card` — flat white/tinted container with the 0.5pt hairline border and
 /// token corner radius used everywhere in the prototype (task groups,
@@ -114,6 +115,41 @@ struct FileBadgeView: View {
     }
 }
 
+/// Circular profile avatar. Renders the user's stored image when one exists
+/// (server profile image or the local-mode avatar, both `data:` base64 URLs),
+/// otherwise the initials over the brand gradient. This is what keeps a
+/// profile picture set on the web in sync on the phone — the server hands back
+/// `profileImageBase64` and every avatar surface decodes it the same way.
+struct ProfileAvatarView: View {
+    var base64DataURL: String?
+    var initials: String
+    var size: CGFloat = 64
+    var fontSize: CGFloat = 20
+
+    var body: some View {
+        ZStack {
+            Circle().fill(LinearGradient(colors: [Color(hex: "#b59cff"), SCColor.primary],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+            if let image = Self.decode(base64DataURL) {
+                image.resizable().scaledToFill()
+            } else {
+                Text(initials).font(.system(size: fontSize, weight: .bold)).foregroundStyle(.white)
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+    }
+
+    /// Decodes a `data:image/...;base64,xxxx` URL (or a bare base64 string) into
+    /// a SwiftUI `Image`. Returns nil when there's no image or it can't be read.
+    static func decode(_ dataURL: String?) -> Image? {
+        guard let dataURL, !dataURL.isEmpty else { return nil }
+        let base64 = dataURL.contains(",") ? String(dataURL.split(separator: ",", maxSplits: 1).last ?? "") : dataURL
+        guard let data = Data(base64Encoded: base64), let ui = UIImage(data: data) else { return nil }
+        return Image(uiImage: ui)
+    }
+}
+
 struct StorageBarView: View {
     var usedBytes: Int
     var totalBytes: Int
@@ -152,6 +188,16 @@ struct StorageBarView: View {
             }
         }
     }
+}
+
+/// Wraps `UIActivityViewController` so a downloaded file (or any item) can be
+/// shared / saved / opened from SwiftUI via `.sheet`.
+struct ShareSheet: UIViewControllerRepresentable {
+    var items: [Any]
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
 /// Two-step "are you sure" confirmation used by delete actions throughout
