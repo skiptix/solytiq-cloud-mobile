@@ -4,8 +4,12 @@ struct AIAssistantSheet: View {
     @EnvironmentObject var store: DataStore
     @Environment(\.dismiss) private var dismiss
 
+    /// Stable id for the local greeting placeholder so it can be excluded from
+    /// the context sent to the model.
+    static let greetingId = "sc.ai.greeting"
+
     @State private var messages: [AppChatMessage] = [
-        AppChatMessage(role: "assistant", content: "Hi! I'm your Solytiq AI assistant. Ask me about your tasks, lists, or schedule.")
+        AppChatMessage(id: greetingId, role: "assistant", content: "Hi! I'm your Solytiq AI assistant. Ask me about your tasks, lists, or schedule.")
     ]
     @State private var sessionId: String?
     @State private var input = ""
@@ -33,7 +37,7 @@ struct AIAssistantSheet: View {
                 HStack(spacing: 10) {
                     TextField("Ask Sol…", text: $input, axis: .vertical)
                         .padding(.horizontal, 12).padding(.vertical, 9)
-                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(SCColor.tinted))
+                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(SCColor.cardTinted))
                     Button {
                         Task { await send() }
                     } label: {
@@ -68,10 +72,14 @@ struct AIAssistantSheet: View {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         input = ""
+        // Snapshot the conversation the model should see *before* appending the
+        // new turn (the greeting is a local placeholder — drop it so it isn't
+        // sent as real context).
+        let prior = messages.filter { $0.id != Self.greetingId }
         messages.append(AppChatMessage(role: "user", content: text))
         sending = true
         defer { sending = false }
-        if let result = await store.sendAIMessage(sessionId: sessionId, content: text) {
+        if let result = await store.sendAIMessage(sessionId: sessionId, priorMessages: prior, content: text) {
             sessionId = result.sessionId
             messages.append(result.reply)
         }

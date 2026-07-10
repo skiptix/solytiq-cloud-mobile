@@ -5,6 +5,7 @@ struct RootView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var router = Router()
     @State private var store: DataStore?
 
@@ -52,11 +53,18 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: appState.mode)
         .animation(.easeInOut(duration: 0.25), value: appState.isRestoringSession)
+        .preferredColorScheme(appState.colorSchemePref.colorScheme)
+    }
+
+    /// The scheme the app is actually rendering in: the explicit preference,
+    /// or the live system scheme when the user chose "System".
+    private var effectiveScheme: ColorScheme {
+        appState.colorSchemePref.colorScheme ?? colorScheme
     }
 
     private var splash: some View {
         ZStack {
-            LinearGradient(colors: [Color(hex: "#ede9ff"), Color(hex: "#fdf8ff"), Color(hex: "#fff0f9")],
+            LinearGradient(colors: SCGradient.backdrop(effectiveScheme),
                             startPoint: .topLeading, endPoint: .bottomTrailing)
                 .ignoresSafeArea()
             Image("AppLogo")

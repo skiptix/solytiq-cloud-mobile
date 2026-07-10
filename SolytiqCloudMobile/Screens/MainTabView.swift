@@ -80,11 +80,7 @@ struct ProfileToolbarButton: View {
 
     var body: some View {
         Button { router.sheet = .settings } label: {
-            ZStack {
-                Circle().fill(LinearGradient(colors: [Color(hex: "#b59cff"), SCColor.primary], startPoint: .topLeading, endPoint: .bottomTrailing))
-                Text(initials).font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
-            }
-            .frame(width: 30, height: 30)
+            ProfileAvatarView(base64DataURL: storedAvatar, initials: initials, size: 30, fontSize: 11)
         }
     }
 
@@ -93,5 +89,9 @@ struct ProfileToolbarButton: View {
         let parts = name.split(separator: " ")
         let letters = parts.prefix(2).compactMap { $0.first }
         return String(letters).uppercased()
+    }
+
+    private var storedAvatar: String? {
+        appState.mode == .server ? appState.currentUser?.profileImageBase64 : appState.localProfileImageBase64
     }
 }

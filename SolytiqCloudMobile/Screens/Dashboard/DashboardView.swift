@@ -21,7 +21,12 @@ struct DashboardView: View {
             return d <= weekFromNow
         }
     }
-    private var dashboardOnly: [AppTask] { allTasks.filter { $0.listId == nil && !$0.checked } }
+    /// "This Week" panel: open tasks due within the coming week but not today
+    /// (today's tasks already surface in Today's Focus), mirroring the web
+    /// Dashboard's split between the "Due Today" and "This Week" observer panels.
+    private var upcomingThisWeek: [AppTask] {
+        dueThisWeek.filter { SCDate.friendly($0.deadline)?.label != "Today" }
+    }
 
     var body: some View {
         NavigationStack {
@@ -52,18 +57,11 @@ struct DashboardView: View {
                     }
 
                     SectionHeaderView(title: "Today's Focus")
-                    if dashboardOnly.isEmpty {
-                        Card { EmptyRowView(text: "Nothing on your plate — enjoy it.") }
-                    } else {
-                        Card {
-                            ForEach(Array(dashboardOnly.enumerated()), id: \.element.id) { idx, task in
-                                TaskRowView(task: task, showDivider: idx < dashboardOnly.count - 1) {
-                                    Task { await toggle(task) }
-                                } onTap: {
-                                    router.sheet = .editTask(task)
-                                }
-                            }
-                        }
+                    taskCard(dueToday, empty: "Nothing due today — enjoy it.")
+
+                    if !upcomingThisWeek.isEmpty {
+                        SectionHeaderView(title: "This Week")
+                        taskCard(upcomingThisWeek, empty: "No deadlines this week.")
                     }
                 }
                 .padding(.bottom, 110)
@@ -76,6 +74,9 @@ struct DashboardView: View {
                     Button { router.sheet = .addTask(listId: nil, sectionId: nil, presetDeadline: nil) } label: {
                         Image(systemName: "plus.circle.fill")
                     }
+                }
+                if appState.mode == .server {
+                    ToolbarItem(placement: .principal) { workspaceChip }
                 }
                 ToolbarItem(placement: .topBarTrailing) { ProfileToolbarButton() }
             }
@@ -91,6 +92,47 @@ struct DashboardView: View {
                 Task { await reload() }
             }
         }
+    }
+
+    /// Renders a card of tappable/toggleable task rows, or an italic empty
+    /// state when there's nothing to show.
+    @ViewBuilder
+    private func taskCard(_ tasks: [AppTask], empty: String) -> some View {
+        if tasks.isEmpty {
+            Card { EmptyRowView(text: empty) }
+        } else {
+            Card {
+                ForEach(Array(tasks.enumerated()), id: \.element.id) { idx, task in
+                    TaskRowView(task: task, showDivider: idx < tasks.count - 1) {
+                        Task { await toggle(task) }
+                    } onTap: {
+                        router.sheet = .editTask(task)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Home-screen workspace switcher — the phone has no sidebar, so the active
+    /// workspace and the switch affordance live in the nav bar here.
+    private var workspaceChip: some View {
+        let current = appState.workspaces.first(where: { $0.id == appState.currentWorkspaceId })
+        return Button { router.sheet = .workspaceSwitcher } label: {
+            HStack(spacing: 5) {
+                Text(current?.emoji ?? "🏠").font(.system(size: 13))
+                Text(current?.name ?? "Workspace")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(SCColor.text)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(SCColor.text3)
+            }
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(Capsule().fill(SCColor.primaryBg))
+            .overlay(Capsule().strokeBorder(SCColor.border, lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
     }
 
     private func toggle(_ task: AppTask) async {

@@ -85,6 +85,44 @@ struct SCMetrics {
 enum AppearanceShape: String, CaseIterable, Codable, Hashable { case sharp, rounded, bubbly }
 enum AppearanceDensity: String, CaseIterable, Codable, Hashable { case compact, regular, airy }
 
+/// User-facing theme preference. `system` follows iOS; `light`/`dark` force a
+/// scheme regardless of the device setting. The app defaults to `light` (the
+/// "Luminous List" design was authored light-first) and applies the choice at
+/// the root via `.preferredColorScheme`.
+enum SCColorSchemePreference: String, CaseIterable, Codable, Hashable {
+    case system, light, dark
+
+    /// `nil` == follow the system; SwiftUI's `.preferredColorScheme(nil)` means
+    /// "don't override".
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .system: return "System"
+        case .light:  return "Light"
+        case .dark:   return "Dark"
+        }
+    }
+}
+
+/// Adaptive background gradient used by the splash and onboarding screens.
+/// The prototype's soft-purple wash reads well on light; on dark it would blow
+/// out contrast, so we swap to deep, low-luminance tones that keep the logo and
+/// form fields legible.
+enum SCGradient {
+    static func backdrop(_ scheme: ColorScheme) -> [Color] {
+        scheme == .dark
+            ? [Color(hex: "#141118"), Color(hex: "#1b1626"), Color(hex: "#241a2e")]
+            : [Color(hex: "#ede9ff"), Color(hex: "#fdf8ff"), Color(hex: "#fff0f9")]
+    }
+}
+
 extension Color {
     init(hex: String) {
         let raw = hex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))

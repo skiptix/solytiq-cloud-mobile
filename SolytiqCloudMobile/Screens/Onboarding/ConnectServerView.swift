@@ -19,6 +19,7 @@ struct ConnectServerView: View {
     @State private var errorMessage: String?
     @State private var shake = false
     @FocusState private var focused: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     private let steps = [
         (icon: "server.rack", title: "Server address", hint: "Enter the URL of your self-hosted Solytiq Cloud instance."),
@@ -38,7 +39,7 @@ struct ConnectServerView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(hex: "#ede9ff"), Color(hex: "#fdf8ff"), Color(hex: "#fff0f9")],
+            LinearGradient(colors: SCGradient.backdrop(colorScheme),
                             startPoint: .topLeading, endPoint: .bottomTrailing)
                 .ignoresSafeArea()
 
@@ -97,7 +98,8 @@ struct ConnectServerView: View {
                         .font(.system(size: 16, weight: .medium))
                         .padding(.horizontal, 16).padding(.vertical, 14)
                         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(SCColor.card))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(SCColor.border, lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(SCColor.primary.opacity(0.45), lineWidth: 1.5))
+                        .shadow(color: SCColor.primary.opacity(0.10), radius: 10, y: 4)
                         .padding(.horizontal, 32)
                         .offset(x: shake ? 8 : 0)
 
@@ -144,7 +146,7 @@ struct ConnectServerView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 15)
-                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(canAdvance ? SCColor.primary : Color(hex: "#d6d0e0")))
+                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(canAdvance ? SCColor.primary : SCColor.text4.opacity(0.5)))
                 }
                 .disabled(!canAdvance || isLoading)
                 .padding(.horizontal, 24).padding(.bottom, 28)
