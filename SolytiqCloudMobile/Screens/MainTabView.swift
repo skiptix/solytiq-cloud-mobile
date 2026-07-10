@@ -28,6 +28,10 @@ struct MainTabView: View {
         .sheet(item: $router.sheet) { route in
             sheetContent(for: route)
                 .presentationDragIndicator(.visible)
+                // Handoff "Sheets & Modals": every bottom sheet uses a 26px top
+                // corner radius. Native presentation gives us the spring-in and
+                // dimmed backdrop; this pins the radius to the spec value.
+                .presentationCornerRadius(26)
         }
     }
 

@@ -51,8 +51,8 @@ struct RootView: View {
                 appState.sync.appBecameActive()
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: appState.mode)
-        .animation(.easeInOut(duration: 0.25), value: appState.isRestoringSession)
+        .animation(SCMotion.screenSlide, value: appState.mode)
+        .animation(SCMotion.screenSlide, value: appState.isRestoringSession)
         .preferredColorScheme(appState.colorSchemePref.colorScheme)
     }
 

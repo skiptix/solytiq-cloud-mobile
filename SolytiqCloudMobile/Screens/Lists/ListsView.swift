@@ -143,7 +143,7 @@ struct ListsView: View {
         let collapsed = collapsedFolders.contains(folder.id)
         return VStack(spacing: 8) {
             Button {
-                withAnimation { if collapsed { collapsedFolders.remove(folder.id) } else { collapsedFolders.insert(folder.id) } }
+                withAnimation(SCMotion.interactive) { if collapsed { collapsedFolders.remove(folder.id) } else { collapsedFolders.insert(folder.id) } }
             } label: {
                 HStack {
                     Text(folder.emoji ?? "📁")
