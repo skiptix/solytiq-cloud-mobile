@@ -95,32 +95,57 @@ struct ListDetailView: View {
         }
     }
 
+    /// Gradient hero card matching the prototype's ListScreen: emoji + name +
+    /// subtitle on the left, a large colored completion percentage on the right,
+    /// a progress bar and a completed/remaining footer.
     private func hero(_ list: AppList) -> some View {
-        VStack(spacing: 10) {
-            Text(list.emoji ?? "📋").font(.system(size: 40))
-            Text(list.name).font(.system(size: 22, weight: .bold))
-            if let subtitle = list.subtitle, !subtitle.isEmpty {
-                Text(subtitle).font(.system(size: 13)).foregroundStyle(SCColor.text3)
-            }
-            HStack {
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(SCColor.hover)
-                        Capsule().fill(Color(hex: list.colorHex)).frame(width: geo.size.width * list.progress)
+        let color = Color(hex: list.colorHex)
+        let pct = Int((list.progress * 100).rounded())
+        return VStack(spacing: 0) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(list.emoji ?? "📋").font(.system(size: 36)).padding(.bottom, 8)
+                    Text(list.name).font(.system(size: 22, weight: .bold)).foregroundStyle(SCColor.text)
+                    if let subtitle = list.subtitle, !subtitle.isEmpty {
+                        Text(subtitle).font(.system(size: 13)).foregroundStyle(SCColor.text3).padding(.top, 3)
                     }
                 }
-                .frame(height: 8)
-                Text("\(Int(list.progress * 100))%").font(.system(size: 13, weight: .bold)).foregroundStyle(Color(hex: list.colorHex))
+                Spacer(minLength: 12)
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("\(pct)%")
+                        .font(.system(size: 36, weight: .bold, design: .rounded)).monospacedDigit()
+                        .foregroundStyle(color)
+                    Text("COMPLETE").font(.system(size: 10, weight: .bold)).tracking(0.7).foregroundStyle(SCColor.text3)
+                }
             }
-            .padding(.horizontal, 24)
-            Text("\(list.doneTasks) of \(list.totalTasks) complete").font(.system(size: 11.5)).foregroundStyle(SCColor.text4)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color(hex: "#ebe6f0"))
+                    Capsule().fill(color).frame(width: geo.size.width * list.progress)
+                }
+            }
+            .frame(height: 6)
+            .padding(.top, 16)
+            HStack {
+                Text("\(list.doneTasks) completed").monospacedDigit()
+                Spacer()
+                Text("\(list.totalTasks - list.doneTasks) remaining").monospacedDigit()
+            }
+            .font(.system(size: 11)).foregroundStyle(SCColor.text3)
+            .padding(.top, 8)
         }
-        .padding(.vertical, 20)
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(LinearGradient(colors: [color.opacity(0.14), SCColor.card], startPoint: .topLeading, endPoint: .bottomTrailing))
+        )
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(SCColor.border, lineWidth: 0.5))
+        .padding(.horizontal, 22)
     }
 
     private func sectionBlock(_ section: AppSection) -> some View {
         VStack(spacing: 0) {
-            SectionHeaderView(title: "\(section.emoji.map { "\($0) " } ?? "")\(section.label)", rightText: "\(section.tasks.count)")
+            sectionHeader(section)
             if section.tasks.isEmpty {
                 Card { EmptyRowView(text: "No tasks yet.") }
             } else {
@@ -141,6 +166,20 @@ struct ListDetailView: View {
             }
             .padding(.top, 8)
         }
+    }
+
+    /// Section label row matching the prototype: emoji + uppercase label, a
+    /// thin trailing hairline, and the task count.
+    private func sectionHeader(_ section: AppSection) -> some View {
+        HStack(spacing: 7) {
+            if let emoji = section.emoji { Text(emoji).font(.system(size: 13)) }
+            Text(section.label.uppercased())
+                .font(.system(size: 10, weight: .bold)).tracking(0.9)
+                .foregroundStyle(SCColor.text3)
+            Rectangle().fill(SCColor.separator).frame(height: 0.5).padding(.leading, 6)
+            Text("\(section.tasks.count)").font(.system(size: 11)).foregroundStyle(SCColor.text4)
+        }
+        .padding(.horizontal, 26).padding(.top, 14).padding(.bottom, 6)
     }
 
     private func toggle(_ task: AppTask) async {
