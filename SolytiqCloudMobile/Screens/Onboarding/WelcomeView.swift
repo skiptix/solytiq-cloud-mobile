@@ -98,7 +98,8 @@ struct WelcomeView: View {
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(active ? SCColor.primary : SCColor.border, lineWidth: 1.5))
             .shadow(color: active ? SCColor.primary.opacity(0.22) : .clear, radius: 16, y: 6)
         }
-        .buttonStyle(.plain)
+        .scPressStyle()
+        .animation(SCMotion.interactive, value: active)
     }
 
     private func proceed() {

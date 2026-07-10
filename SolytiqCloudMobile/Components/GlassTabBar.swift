@@ -40,7 +40,7 @@ struct GlassTabBar: View {
     private func tabButton(_ tab: (MainTab, String, String)) -> some View {
         let isActive = selected == tab.0
         return Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) { selected = tab.0 }
+            withAnimation(SCMotion.interactive) { selected = tab.0 }
         } label: {
             VStack(spacing: 2) {
                 Image(systemName: tab.1)
@@ -57,7 +57,7 @@ struct GlassTabBar: View {
                 Capsule().fill(isActive ? Color.white.opacity(0.7) : .clear)
             )
         }
-        .buttonStyle(.plain)
+        .scPressStyle()
     }
 
     private var aiBubble: some View {
@@ -73,7 +73,7 @@ struct GlassTabBar: View {
             .overlay(Circle().strokeBorder(.white.opacity(0.6), lineWidth: 2))
             .shadow(color: SCColor.primary.opacity(0.5), radius: 12, y: 3)
         }
-        .buttonStyle(.plain)
+        .scPressStyle()
         .padding(.horizontal, 4)
     }
 }

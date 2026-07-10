@@ -14,7 +14,7 @@ struct TaskRowView: View {
         HStack(spacing: 11) {
             Button {
                 checking = true
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) { checking = false }
+                withAnimation(SCMotion.checkPop) { checking = false }
                 onToggle()
             } label: {
                 ZStack {
@@ -27,6 +27,7 @@ struct TaskRowView: View {
                     }
                 }
                 .scaleEffect(checking ? 0.82 : 1)
+                .rotationEffect(.degrees(checking ? 4 : 0))
             }
             .buttonStyle(.plain)
 
@@ -162,6 +163,6 @@ struct StatCardView: View {
             .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(SCColor.card))
             .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(SCColor.border, lineWidth: 0.5))
         }
-        .buttonStyle(.plain)
+        .scPressStyle()
     }
 }

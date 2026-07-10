@@ -216,9 +216,14 @@ struct ConnectServerView: View {
         }
     }
 
+    /// Validation shake from the handoff's motion table (`shake`, 420ms): a
+    /// short horizontal oscillation that settles back to rest, not a single
+    /// lurch.
     private func shakeInvalid(_ message: String) {
         errorMessage = message
-        withAnimation(.default) { shake = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { shake = false }
+        withAnimation(.linear(duration: 0.07).repeatCount(5, autoreverses: true)) { shake = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
+            withAnimation(.linear(duration: 0.07)) { shake = false }
+        }
     }
 }
