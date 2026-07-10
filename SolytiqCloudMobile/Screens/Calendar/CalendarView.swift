@@ -102,19 +102,34 @@ struct CalendarView: View {
     }
 
     private var monthNav: some View {
-        HStack {
-            Button { monthAnchor = calendar.date(byAdding: .month, value: -1, to: monthAnchor) ?? monthAnchor } label: {
-                Image(systemName: "chevron.left")
+        HStack(spacing: 14) {
+            monthNavButton("chevron.left") {
+                monthAnchor = calendar.date(byAdding: .month, value: -1, to: monthAnchor) ?? monthAnchor
             }
-            Spacer()
-            Text(monthTitle).font(.system(size: 18, weight: .bold))
-            Spacer()
-            Button { monthAnchor = calendar.date(byAdding: .month, value: 1, to: monthAnchor) ?? monthAnchor } label: {
-                Image(systemName: "chevron.right")
+            Text(monthTitle)
+                .font(.system(size: 18, weight: .bold)).foregroundStyle(SCColor.text)
+                .frame(minWidth: 160)
+            monthNavButton("chevron.right") {
+                monthAnchor = calendar.date(byAdding: .month, value: 1, to: monthAnchor) ?? monthAnchor
             }
         }
-        .foregroundStyle(SCColor.text2)
-        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 18)
+        .padding(.top, 4)
+    }
+
+    /// Boxed month-step button matching the prototype (34×34, card fill,
+    /// hairline border, 11pt radius).
+    private func monthNavButton(_ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(SCColor.text2)
+                .frame(width: 34, height: 34)
+                .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(SCColor.card))
+                .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(SCColor.border, lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
     }
 
     private var monthTitle: String {

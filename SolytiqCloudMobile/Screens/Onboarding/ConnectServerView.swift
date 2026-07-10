@@ -18,6 +18,7 @@ struct ConnectServerView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var shake = false
+    @State private var showPassword = false
     @FocusState private var focused: Bool
     @Environment(\.colorScheme) private var colorScheme
 
@@ -34,6 +35,26 @@ struct ConnectServerView: View {
         case 1: return !username.trimmingCharacters(in: .whitespaces).isEmpty
         case 2: return !password.isEmpty
         default: return twoFACode.count >= 6
+        }
+    }
+
+    private var currentIcon: String { step < 3 ? steps[step].icon : "lock.shield.fill" }
+    private var currentTitle: String { step < 3 ? steps[step].title : "Two-factor code" }
+    private var currentHint: String { step < 3 ? steps[step].hint : "Enter the 6-digit code from your authenticator app." }
+    private var fieldLabel: String {
+        switch step {
+        case 0: return "Server URL"
+        case 1: return "Username"
+        case 2: return "Password"
+        default: return "Authentication code"
+        }
+    }
+    private var helperText: String {
+        switch step {
+        case 0: return "Your server address looks like https://cloud.yourdomain.com"
+        case 1: return "Use the same username you set up on your server."
+        case 2: return "We never store your password. Sessions stay on this device."
+        default: return "Open your authenticator app to read the current 6-digit code."
         }
     }
 
@@ -58,7 +79,7 @@ struct ConnectServerView: View {
                 Image("AppLogo").resizable().frame(width: 56, height: 56)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .shadow(color: SCColor.primary.opacity(0.3), radius: 16, y: 8)
-                    .padding(.top, 12)
+                    .padding(.top, 20)
 
                 HStack(spacing: 6) {
                     ForEach(0..<totalSteps, id: \.self) { i in
@@ -69,91 +90,148 @@ struct ConnectServerView: View {
                 }
                 .padding(.top, 20)
 
-                Spacer()
-
-                VStack(spacing: 18) {
-                    if step < 3 {
-                        let s = steps[step]
-                        VStack(spacing: 6) {
-                            Text(s.title).font(.system(size: 22, weight: .bold))
-                            Text(s.hint).font(.system(size: 13)).foregroundStyle(SCColor.text3)
-                                .multilineTextAlignment(.center)
-                        }
-                        .padding(.horizontal, 32)
-
-                        Group {
-                            switch step {
-                            case 0:
-                                TextField("cloud.example.com", text: $serverURL)
-                                    .textInputAutocapitalization(.never).autocorrectionDisabled()
-                                    .keyboardType(.URL)
-                            case 1:
-                                TextField("username", text: $username)
-                                    .textInputAutocapitalization(.never).autocorrectionDisabled()
-                            default:
-                                SecureField("Password", text: $password)
-                            }
-                        }
-                        .focused($focused)
-                        .font(.system(size: 16, weight: .medium))
-                        .padding(.horizontal, 16).padding(.vertical, 14)
-                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(SCColor.card))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(SCColor.primary.opacity(0.45), lineWidth: 1.5))
-                        .shadow(color: SCColor.primary.opacity(0.10), radius: 10, y: 4)
-                        .padding(.horizontal, 32)
-                        .offset(x: shake ? 8 : 0)
-
-                        if setupNotice && step == 1 {
-                            Label("This server has no admin account yet. Finish first-time setup in a web browser, then come back here to sign in.", systemImage: "info.circle")
-                                .font(.system(size: 12)).foregroundStyle(SCColor.warning)
-                                .padding(.horizontal, 32)
-                        }
-                    } else {
-                        VStack(spacing: 6) {
-                            Text("Two-factor code").font(.system(size: 22, weight: .bold))
-                            Text("Enter the 6-digit code from your authenticator app.")
-                                .font(.system(size: 13)).foregroundStyle(SCColor.text3).multilineTextAlignment(.center)
-                        }
-                        .padding(.horizontal, 32)
-                        TextField("000000", text: $twoFACode)
-                            .keyboardType(.numberPad)
+                ScrollView {
+                    VStack(spacing: 16) {
+                        stepCard
+                        Text(helperText)
+                            .font(.system(size: 11)).foregroundStyle(SCColor.text4)
                             .multilineTextAlignment(.center)
-                            .font(.system(size: 24, weight: .bold, design: .monospaced))
-                            .padding(.vertical, 14)
-                            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(SCColor.card))
-                            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(SCColor.border, lineWidth: 1))
-                            .padding(.horizontal, 32)
-                            .offset(x: shake ? 8 : 0)
+                            .padding(.horizontal, 8)
                     }
-
-                    if let errorMessage {
-                        Text(errorMessage).font(.system(size: 12.5)).foregroundStyle(SCColor.danger)
-                            .multilineTextAlignment(.center).padding(.horizontal, 32)
-                    }
+                    .padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 32)
                 }
-
-                Spacer()
-
-                Button(action: advance) {
-                    ZStack {
-                        if isLoading {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text(step == 2 || step == 3 ? "Sign In" : "Continue")
-                                .font(.system(size: 15.5, weight: .semibold))
-                        }
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 15)
-                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(canAdvance ? SCColor.primary : SCColor.text4.opacity(0.5)))
-                }
-                .disabled(!canAdvance || isLoading)
-                .padding(.horizontal, 24).padding(.bottom, 28)
             }
         }
         .onAppear { focused = true }
         .onChange(of: step) { _, _ in focused = true }
+    }
+
+    /// Frosted "step card" matching the prototype's LoginScreen: icon tile +
+    /// STEP N OF M eyebrow + title, hint, a labeled tinted input, an optional
+    /// entered-info summary on the password step, and an in-card CTA.
+    private var stepCard: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 15, style: .continuous).fill(SCColor.primaryBg)
+                    Image(systemName: currentIcon).font(.system(size: 22)).foregroundStyle(SCColor.primary)
+                }
+                .frame(width: 48, height: 48)
+                .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).strokeBorder(SCColor.primaryBg2, lineWidth: 1))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("STEP \(min(step, 3) + 1) OF \(totalSteps)")
+                        .font(.system(size: 10, weight: .bold)).tracking(0.8).foregroundStyle(SCColor.primary)
+                    Text(currentTitle).font(.system(size: 20, weight: .bold)).foregroundStyle(SCColor.text)
+                }
+                Spacer(minLength: 0)
+            }
+
+            Text(currentHint).font(.system(size: 13)).foregroundStyle(SCColor.text3)
+
+            inputField
+
+            if setupNotice && step == 1 {
+                Label("This server has no admin account yet. Finish first-time setup in a web browser, then come back here to sign in.", systemImage: "info.circle")
+                    .font(.system(size: 12)).foregroundStyle(SCColor.warning)
+            }
+
+            if step == 2 { summaryRows }
+
+            if let errorMessage {
+                Text(errorMessage).font(.system(size: 12.5)).foregroundStyle(SCColor.danger)
+            }
+
+            Button(action: advance) {
+                ZStack {
+                    if isLoading {
+                        ProgressView().tint(.white)
+                    } else {
+                        HStack(spacing: 8) {
+                            if step >= 2 {
+                                Image(systemName: "lock.fill").font(.system(size: 14))
+                                Text("Sign In")
+                            } else {
+                                Text("Continue")
+                                Image(systemName: "arrow.right").font(.system(size: 14))
+                            }
+                        }
+                        .font(.system(size: 15, weight: .bold))
+                    }
+                }
+                .foregroundStyle(canAdvance ? .white : SCColor.text4)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(canAdvance ? SCColor.primary : SCColor.hover))
+            }
+            .disabled(!canAdvance || isLoading)
+        }
+        .padding(.horizontal, 22).padding(.vertical, 26)
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(SCColor.card.opacity(0.85)))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Color.white.opacity(0.85), lineWidth: 0.5))
+        .shadow(color: SCColor.primary.opacity(0.12), radius: 20, y: 12)
+        .offset(x: shake ? 8 : 0)
+    }
+
+    private var inputField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(fieldLabel.uppercased())
+                    .font(.system(size: 10, weight: .bold)).tracking(0.8).foregroundStyle(SCColor.text4)
+                Spacer()
+                if step == 2 {
+                    Button(showPassword ? "Hide" : "Show") { showPassword.toggle() }
+                        .font(.system(size: 12, weight: .bold)).foregroundStyle(SCColor.primary)
+                }
+            }
+            Group {
+                switch step {
+                case 0:
+                    TextField("https://cloud.example.com", text: $serverURL)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .keyboardType(.URL)
+                        .font(.system(size: 14, design: .monospaced))
+                case 1:
+                    TextField("your_username", text: $username)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .font(.system(size: 16, weight: .semibold))
+                case 2:
+                    Group {
+                        if showPassword {
+                            TextField("••••••••", text: $password)
+                        } else {
+                            SecureField("••••••••", text: $password)
+                        }
+                    }
+                    .font(.system(size: 18))
+                default:
+                    TextField("000000", text: $twoFACode)
+                        .keyboardType(.numberPad)
+                        .font(.system(size: 22, weight: .bold, design: .monospaced))
+                }
+            }
+            .focused($focused)
+            .foregroundStyle(SCColor.text)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 13)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(SCColor.cardTinted))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(SCColor.border, lineWidth: 0.5))
+    }
+
+    private var summaryRows: some View {
+        VStack(spacing: 6) {
+            summaryRow(icon: "server.rack", label: serverURL, editStep: 0)
+            summaryRow(icon: "person.fill", label: username, editStep: 1)
+        }
+    }
+
+    private func summaryRow(icon: String, label: String, editStep: Int) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon).font(.system(size: 13)).foregroundStyle(SCColor.text4)
+            Text(label).font(.system(size: 12.5)).foregroundStyle(SCColor.text3).lineLimit(1)
+            Button("Edit") { step = editStep; errorMessage = nil }
+                .font(.system(size: 11, weight: .bold)).foregroundStyle(SCColor.primary)
+            Spacer(minLength: 0)
+        }
     }
 
     private func advance() {
