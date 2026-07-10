@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<!-- @dsCard group="UI Kit — Solytiq Cloud Ios" name="Solytiq Cloud iOS — UI Kit" subtitle="Clickable prototype · light lavender" viewport="1200x900" -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solytiq Cloud — iOS Prototype v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..700,0..1,-50..200&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+:root {
+  --sc-page:         #fdf8ff;
+  --sc-card:         #ffffff;
+  --sc-card-2:       #fbfaff;
+  --sc-tinted:       #f7f2fc;
+  --sc-hover:        #f1ecf6;
+  --sc-border:       #e9e4f2;
+  --sc-separator:    rgba(28,27,34,0.08);
+  --sc-text:         #1c1b22;
+  --sc-text-2:       #484552;
+  --sc-text-3:       #787584;
+  --sc-text-4:       #b0acbe;
+  --sc-primary:      #5e4dbb;
+  --sc-primary-soft: #9d8dff;
+  --sc-primary-bg:   #F5F3FF;
+  --sc-primary-bg-2: #ede9ff;
+  --sc-success:      #10B981;
+  --sc-warning:      #ea580c;
+  --sc-danger:       #ba1a1a;
+  --sc-info:         #1D4ED8;
+  --sc-r:       18px;
+  --sc-r-sm:    10px;
+  --sc-r-lg:    24px;
+  --sc-row-py:  11px;
+  --sc-card-pad:14px;
+  --sc-glass-bg:     rgba(253,248,255,0.82);
+  --sc-glass-border: rgba(28,27,34,0.07);
+  --sc-font:        -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Hanken Grotesk", "Inter", system-ui, sans-serif;
+  --sc-font-mono:   "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--sc-font);
+  background: radial-gradient(ellipse at 40% 30%, #2a1d52 0%, #130d28 60%, #0a0618 100%);
+  color: var(--sc-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+#root {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 24px 24px 220px;
+}
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+  font-style: normal; font-size: 20px; line-height: 1;
+  display: inline-flex; align-items: center; flex-shrink: 0; user-select: none;
+}
+.sc-mono { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
+.sc-scroll { scrollbar-width: thin; scrollbar-color: rgba(28,27,34,0.12) transparent; }
+.sc-scroll::-webkit-scrollbar { width: 0; height: 0; }
+
+/* ── Sheets & overlays ── */
+@keyframes sheetIn     { from { transform: translateY(100%) scale(0.97); opacity: 0.7; } to { transform: translateY(0) scale(1); opacity: 1; } }
+@keyframes overlayIn   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn       { from { opacity: 0; transform: scale(0.86) translateY(-10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+/* ── Screen / element entrance ── */
+@keyframes screenIn    { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes springUp    { 0% { opacity:0; transform:translateY(22px) scale(0.96); } 60% { opacity:1; transform:translateY(-3px) scale(1.005); } 100% { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes springScale { 0% { transform:scale(0.72); opacity:0; } 55% { transform:scale(1.06); opacity:1; } 75% { transform:scale(0.97); } 100% { transform:scale(1); opacity:1; } }
+@keyframes heroIn      { 0% { opacity:0; transform:scale(0.82) translateY(24px); } 65% { opacity:1; transform:scale(1.02) translateY(-2px); } 100% { opacity:1; transform:scale(1) translateY(0); } }
+@keyframes fadeUp      { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeBlur      { from { opacity:0; filter:blur(6px); transform:scale(0.98); } to { opacity:1; filter:blur(0); transform:scale(1); } }
+@keyframes slideFromRight{ from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:translateX(0); } }
+@keyframes slideFromLeft { from { opacity:0; transform:translateX(-30px); } to { opacity:1; transform:translateX(0); } }
+@keyframes slideRight    { from { opacity:0; transform:translateX(-18px); } to { opacity:1; transform:translateX(0); } }
+
+/* ── Checkbox & interactive ── */
+@keyframes checkPop    { 0% { transform:scale(0) rotate(-12deg); opacity:0; } 55% { transform:scale(1.25) rotate(4deg); opacity:1; } 80% { transform:scale(0.9) rotate(-1deg); } 100% { transform:scale(1) rotate(0); opacity:1; } }
+@keyframes uncheckPop  { 0% { transform:scale(1); opacity:1; } 100% { transform:scale(0) rotate(12deg); opacity:0; } }
+@keyframes rowSlideIn  { from { opacity:0; transform:translateX(-12px); } to { opacity:1; transform:translateX(0); } }
+
+/* ── Progress & loaders ── */
+@keyframes progressFill { from { width:0 !important; } to { } }
+@keyframes pulse       { 0%,100%{opacity:1} 50%{opacity:0.45} }
+
+/* ── Ambient ── */
+@keyframes aiBubbleFloat { 0%,100%{transform:translateY(0) rotate(0deg)} 33%{transform:translateY(-5px) rotate(1deg)} 66%{transform:translateY(-3px) rotate(-1deg)} }
+@keyframes aiDotBounce   { 0%,80%,100%{transform:translateY(0);opacity:0.35} 40%{transform:translateY(-7px);opacity:1} }
+@keyframes shake         { 10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)} 30%,50%,70%{transform:translateX(-7px)} 40%,60%{transform:translateX(7px)} }
+@keyframes scIn          { 0%{transform:scale(0);opacity:0} 60%{transform:scale(1.1);opacity:1} 100%{transform:scale(1);opacity:1} }
+
+/* ── Global press states ── */
+button { transition: transform 120ms cubic-bezier(0.34,1.56,0.64,1), opacity 120ms ease; -webkit-tap-highlight-color: transparent; }
+button:active { transform: scale(0.94) !important; opacity: 0.85; }
+
+/* ── Smooth scroll ── */
+.sc-scroll { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="components.jsx?v=2"></script>
+<script type="text/babel" src="sheets.jsx?v=2"></script>
+<script type="text/babel" src="screens.jsx?v=2"></script>
+<script type="text/babel" src="features.jsx?v=2"></script>
+<script type="text/babel" src="calendar.jsx?v=2"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef, createContext, useContext } = React;
+
+const AppCtx = createContext(null);
+window.AppCtx = AppCtx;
+const useApp = () => useContext(AppCtx);
+window.useApp = useApp;
+
+// ─── Date helpers ─────────────────────────────────────────────
+const iso = d => { const x = new Date(d); x.setHours(0,0,0,0); return x.toISOString().slice(0,10); };
+const addDays = n => { const x = new Date(); x.setDate(x.getDate()+n); return iso(x); };
+
+// ─── Seed Data ────────────────────────────────────────────────
+const SEED_TASKS = [
+  { id:1, title:'Finalize Q3 Marketing Report', time:'2:00 PM', deadline:iso(new Date()), priority:'High', badge:'Work', note:'Include Q2 retro outcomes — share draft with Sam first.', checked:false,
+    subItems:[
+      { id:11, title:'Pull Q2 retro outcomes', checked:true },
+      { id:12, title:'Draft executive summary', checked:false },
+      { id:13, title:'Add channel-by-channel charts', checked:false },
+      { id:14, title:'Share draft with Sam', checked:false },
+    ] },
+  { id:2, title:'Review design mocks for Solytiq web', deadline:iso(new Date()), badge:'Work', checked:false },
+  { id:3, title:'Morning standup', deadline:iso(new Date()), time:'9:30 AM', checked:true },
+  { id:4, title:'Pack gear for Hamburg trip', deadline:addDays(2), badge:'Personal', note:'Saddle bag, lights, spare bottle.', checked:false },
+  { id:5, title:'Send sponsor follow-ups', deadline:addDays(3), priority:'Medium', badge:'Work', checked:false },
+  { id:6, title:'Plan weekend long run', deadline:addDays(5), badge:'Personal', checked:false },
+];
+
+const SEED_LISTS = [
+  {
+    id:'backyard-2026', name:'Backyard 2026', emoji:'🚴', subtitle:"Hamburg's Backyard Ultra",
+    color:'#5e4dbb', colorBg:'#F5F3FF', folderId:undefined, isPublic:true,
+    shareEnabled:true, shareToken:'by26-9f3kd2', shareHasPassword:false, shareExpiresAt:null, shareSubpages:true,
+    sections:[
+      { id:'training', label:'Training', emoji:'🏃', tasks:[
+        { id:101, title:'Long run · 24 mi this Saturday', deadline:addDays(4), priority:'High', checked:false,
+          subItems:[
+            { id:1011, title:'Charge watch + headphones', checked:true },
+            { id:1012, title:'Prep hydration + gels', checked:false },
+            { id:1013, title:'Map the route', checked:false },
+          ] },
+        { id:106, title:'Build full race-day plan', deadline:addDays(9), priority:'High', checked:false, linkedListId:'sublist-raceday', linkedListType:'sublist' },
+        { id:102, title:'Tempo intervals · 5×1 km', deadline:addDays(7), priority:'Medium', checked:false },
+        { id:103, title:'Recovery jog 30 min', deadline:addDays(1), checked:true },
+      ]},
+      { id:'gear', label:'Gear', emoji:'🎒', tasks:[
+        { id:201, title:'Pack helmet, lights, spare bottle', badge:'Personal', checked:false },
+        { id:202, title:'Replace worn brake pads', priority:'Medium', checked:false },
+        { id:203, title:'Order nutrition gels', deadline:addDays(2), checked:true },
+      ]},
+      { id:'travel', label:'Travel', emoji:'✈️', tasks:[
+        { id:301, title:'Book Hamburg Airbnb', deadline:addDays(10), priority:'High', checked:false },
+        { id:302, title:'Train ticket Hamburg→Hannover', deadline:addDays(12), checked:false },
+      ]},
+    ],
+  },
+  {
+    id:'sublist-raceday', name:'Race-day Plan', emoji:'🏁', subtitle:'Sublist of “Build full race-day plan”',
+    color:'#5e4dbb', colorBg:'#F5F3FF', folderId:undefined, isPublic:false, parentTaskId:106, depth:1,
+    sections:[
+      { id:'rd-tasks', label:'Checklist', emoji:'✅', tasks:[
+        { id:1061, title:'Lay out kit the night before', checked:false },
+        { id:1062, title:'Set 4:30 AM alarm', checked:true },
+        { id:1063, title:'Pre-load loop nutrition', checked:false },
+        { id:1064, title:'Brief the crew on hand-offs', checked:false },
+      ]},
+    ],
+  },
+  {
+    id:'reading', name:'Reading', emoji:'📚', subtitle:'Books on the queue',
+    color:'#10B981', colorBg:'#ECFDF5', folderId:'f-personal', isPublic:false,
+    sections:[
+      { id:'reading-now', label:'Now Reading', emoji:'📖', tasks:[
+        { id:401, title:'Finish "The Way of Kings"', checked:false },
+        { id:402, title:'Start "Project Hail Mary"', checked:false },
+        { id:403, title:'Atomic Habits — re-read ch. 4–8', checked:true },
+      ]},
+    ],
+  },
+  {
+    id:'home-projects', name:'Home Projects', emoji:'🏡', subtitle:'Things to fix at home',
+    color:'#ea580c', colorBg:'#fff7ed', folderId:'f-personal', isPublic:false,
+    sections:[
+      { id:'home-todo', label:'To Do', emoji:'🔧', tasks:[
+        { id:501, title:'Fix leaky kitchen faucet', priority:'High', checked:false },
+        { id:502, title:'Paint bedroom wall', checked:false },
+        { id:503, title:'Buy shelving unit for office', deadline:addDays(6), checked:false },
+        { id:504, title:'Repot the plants', checked:true },
+      ]},
+    ],
+  },
+];
+
+const SEED_FOLDERS = [
+  { id:'f-personal', name:'Personal Life', emoji:'🌿', color:'#10B981', collapsed:false },
+];
+
+const SEED_FILES = [
+  { id:'file1', name:'Q2_Report_2026.pdf', mimeType:'application/pdf', size:2400000, isPublic:true, createdAt:'2026-05-20T10:00:00Z', shareUrl:'https://cloud.solytiq.app/share/abc123', hasPassword:false, expiresAt:null },
+  { id:'file2', name:'team_photo.jpg', mimeType:'image/jpeg', size:850000, isPublic:false, createdAt:'2026-05-18T14:30:00Z', shareUrl:'https://cloud.solytiq.app/share/def456', hasPassword:true, expiresAt:'2026-07-01' },
+  { id:'file3', name:'design_mockups_v3.zip', mimeType:'application/zip', size:15800000, isPublic:false, createdAt:'2026-05-15T09:00:00Z', shareUrl:'https://cloud.solytiq.app/share/ghi789', hasPassword:false, expiresAt:null },
+  { id:'file4', name:'onboarding_screen.png', mimeType:'image/png', size:1200000, isPublic:true, createdAt:'2026-05-10T16:00:00Z', shareUrl:'https://cloud.solytiq.app/share/jkl012', hasPassword:false, expiresAt:null },
+];
+
+const SEED_WORKSPACES = [
+  { id:'ws-personal', name:'Personal', emoji:'🏠', description:'Your private space — just for you.', visibility:'private', role:'owner', memberCount:1,
+    members:[ {userId:'u1', username:'alex_admin', fullName:'Alex Mendez', role:'owner'} ] },
+  { id:'ws-team', name:'Solytiq Team', emoji:'🚀', description:'Shared workspace for the product crew.', visibility:'public', role:'member', memberCount:4,
+    members:[
+      {userId:'u2', username:'sam_lee', fullName:'Sam Lee', role:'owner'},
+      {userId:'u1', username:'alex_admin', fullName:'Alex Mendez', role:'member'},
+      {userId:'u3', username:'priya_n', fullName:'Priya Nair', role:'member'},
+      {userId:'u4', username:'jonas_k', fullName:'Jonas Krause', role:'member'},
+    ] },
+  { id:'ws-hobbies', name:'Hobbies', emoji:'🎨', description:'Side projects, reading, training.', visibility:'private', role:'owner', memberCount:1,
+    members:[ {userId:'u1', username:'alex_admin', fullName:'Alex Mendez', role:'owner'} ] },
+];
+
+const SEED_MEETINGS = [
+  { id:'mt1', title:'Design review w/ Sam', date:iso(new Date()), allDay:false, startTime:'11:00', endTime:'11:30', location:'Meet · #product', description:'Walk through the new calendar chips.', color:'#3b82f6', workspaceId:'ws-team' },
+  { id:'mt2', title:'1:1 with Priya', date:addDays(1), allDay:false, startTime:'14:30', endTime:'15:00', location:null, description:null, color:'#8b5cf6', workspaceId:'ws-team' },
+  { id:'mt3', title:'Dentist', date:addDays(2), allDay:false, startTime:'09:00', endTime:'09:30', location:'Clinic', description:null, color:'#10b981', workspaceId:'ws-personal' },
+  { id:'mt4', title:'Sprint planning', date:addDays(3), allDay:true, startTime:null, endTime:null, location:null, description:'Whole-day workshop.', color:'#5e4dbb', workspaceId:'ws-team' },
+  { id:'mt5', title:'Recovery week', date:addDays(5), allDay:true, startTime:null, endTime:null, location:null, description:null, color:'#f59e0b', workspaceId:'ws-hobbies' },
+];
+
+const SEED_TIMELINES = [
+  {
+    id:'tl-launch', name:'Solytiq 2.0 Launch', emoji:'🚀', subtitle:'Road to the public release',
+    color:'#5e4dbb', colorBg:'#F5F3FF', isPublic:true, layout:'vertical', folderId:undefined, workspaceId:'ws-team',
+    shareEnabled:true, shareToken:'tl-launch-7a', shareHasPassword:true, shareExpiresAt:addDays(40),
+    milestones:[
+      { id:'m1', title:'Kickoff & scope lock', description:'Align the team on scope, success metrics and the release date.', date:addDays(-21), time:'10:00', status:'done', emoji:'🎯', color:null },
+      { id:'m2', title:'Beta build to testers', description:'Ship the first end-to-end build to the closed beta group.', date:addDays(-7), time:null, status:'done', emoji:'🧪', color:null },
+      { id:'m3', title:'Marketing site live', description:'Landing page, pricing and docs go live behind a flag.', date:iso(new Date()), time:'15:00', status:'in-progress', emoji:'🌐', color:null },
+      { id:'m4', title:'Public launch', description:'Flip the flag, announce on socials, open sign-ups.', date:addDays(14), time:'09:00', status:'upcoming', emoji:'🎉', color:'#ea580c' },
+      { id:'m5', title:'Post-launch retro', description:'Review metrics, gather feedback, plan the next cycle.', date:addDays(28), time:null, status:'upcoming', emoji:'📝', color:null },
+    ],
+  },
+  {
+    id:'tl-race', name:'Backyard Ultra Prep', emoji:'🏃', subtitle:'12-week build to race day',
+    color:'#10B981', colorBg:'#ECFDF5', isPublic:false, layout:'detailed', folderId:'f-personal', workspaceId:'ws-hobbies',
+    shareEnabled:false, shareToken:null, shareHasPassword:false, shareExpiresAt:null,
+    milestones:[
+      { id:'r1', title:'Base mileage block', description:'Build to 50 mi / week with easy runs.', date:addDays(-30), time:null, status:'done', emoji:'📈', color:null },
+      { id:'r2', title:'Peak long run · 32 mi', description:'Longest run of the cycle on race-like terrain.', date:addDays(5), time:'06:00', status:'upcoming', emoji:'⛰️', color:null },
+      { id:'r3', title:'Taper begins', description:'Cut volume 40%, sharpen with strides.', date:addDays(12), time:null, status:'upcoming', emoji:'📉', color:null },
+      { id:'r4', title:'Race day · Hamburg', description:'Last runner standing. One loop every hour.', date:addDays(21), time:'08:00', status:'upcoming', emoji:'🏁', color:'#ea580c' },
+    ],
+  },
+];
+
+const SEED_AI_MESSAGES = [
+  { id:1, role:'assistant', content:"Hi! I'm your Solytiq AI assistant. I can help you organize tasks, set priorities, and answer questions about your work. What would you like help with?" },
+  { id:2, role:'user', content:'Which tasks should I focus on today?' },
+  { id:3, role:'assistant', content:"Based on your schedule, I'd focus on the **Q3 Marketing Report** (High priority, due today) first, then the design mock review. You have 2 tasks due today — both Work-tagged. Want me to help you time-block your afternoon?" },
+  { id:4, role:'user', content:'Can you create a morning routine checklist for me?' },
+];
+
+const SEED_TRASH = [
+  { id:1, task:{ title:'Old reminder: Call the bank', checked:false, priority:'Low' }, deletedAt:'May 27, 2026' },
+  { id:2, task:{ title:'Draft blog post about cycling', checked:false }, deletedAt:'May 26, 2026' },
+];
+
+// ─── Tweak palettes / shapes / densities ─────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "palette": [
+    "#5e4dbb",
+    "#9d8dff",
+    "#F5F3FF",
+    "#ede9ff",
+    "#fdf8ff"
+  ],
+  "shape": "rounded",
+  "density": "regular"
+}/*EDITMODE-END*/;
+
+const SHAPES = {
+  sharp:   { r:8,  sm:5,  lg:12 },
+  rounded: { r:18, sm:10, lg:24 },
+  bubbly:  { r:28, sm:18, lg:36 },
+};
+const DENSITIES = {
+  compact: { rowPad:'8px',  cardPad:'10px' },
+  regular: { rowPad:'11px', cardPad:'14px' },
+  airy:    { rowPad:'16px', cardPad:'18px' },
+};
+
+// ─── App ──────────────────────────────────────────────────────
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  // Apply tweaks to CSS custom properties
+  useEffect(() => {
+    const root = document.documentElement;
+    if (Array.isArray(t.palette) && t.palette.length >= 3) {
+      root.style.setProperty('--sc-primary',      t.palette[0]);
+      root.style.setProperty('--sc-primary-soft', t.palette[1]);
+      root.style.setProperty('--sc-primary-bg',   t.palette[2]);
+      root.style.setProperty('--sc-primary-bg-2', t.palette[3] || t.palette[2]);
+      root.style.setProperty('--sc-page',         t.palette[4] || '#fdf8ff');
+    }
+    const s = SHAPES[t.shape] || SHAPES.rounded;
+    root.style.setProperty('--sc-r',    s.r  + 'px');
+    root.style.setProperty('--sc-r-sm', s.sm + 'px');
+    root.style.setProperty('--sc-r-lg', s.lg + 'px');
+    const d = DENSITIES[t.density] || DENSITIES.regular;
+    root.style.setProperty('--sc-row-py',   d.rowPad);
+    root.style.setProperty('--sc-card-pad', d.cardPad);
+  }, [t.palette, t.shape, t.density]);
+  const [screen, setScreen] = useState('welcome');
+  const [modal,  setModal]  = useState(null);
+  const [tasks,  setTasks]  = useState(SEED_TASKS);
+  const [lists,  setLists]  = useState(SEED_LISTS);
+  const [folders, setFolders] = useState(SEED_FOLDERS);
+  const [timelines, setTimelines] = useState(SEED_TIMELINES);
+  const [files,  setFiles]  = useState(SEED_FILES);
+  const [meetings, setMeetings] = useState(SEED_MEETINGS);
+  const [workspaces, setWorkspaces] = useState(SEED_WORKSPACES);
+  const [currentWorkspaceId, setCurrentWorkspaceId] = useState('ws-personal');
+  const [selectedTimelineId, setSelectedTimelineId] = useState('tl-launch');
+  const [modalData, setModalData] = useState(null);
+  const [aiMessages, setAiMessages] = useState(SEED_AI_MESSAGES);
+  const [trash, setTrash] = useState(SEED_TRASH);
+  const [currentListId,   setCurrentListId]   = useState('backyard-2026');
+  const [currentFolderId, setCurrentFolderId] = useState('f-personal');
+  const [currentPreviewFile, setCurrentPreviewFile] = useState(null);
+  const [selectedTaskId,  setSelectedTaskId]  = useState(null);
+  const [taskFilter,      setTaskFilter]      = useState('open');
+  const [taskCounter, setTaskCounter] = useState(2000);
+
+  const PROFILE_DEFAULTS = {
+    username:'alex_admin', fullName:'Alex Mendez', email:'alex@solytiq.cloud',
+    profileImage:null, isAdmin:true, mode:null, serverUrl:'',
+  };
+  const [profile, setProfile] = useState(() => {
+    try { const s = localStorage.getItem('sc-ios-v2-profile'); if (s) return { ...PROFILE_DEFAULTS, ...JSON.parse(s) }; } catch {}
+    return PROFILE_DEFAULTS;
+  });
+  useEffect(() => {
+    try { localStorage.setItem('sc-ios-v2-profile', JSON.stringify(profile)); } catch {}
+  }, [profile]);
+
+  // ── Task actions ───────────────────────────────────────────
+  const toggleTask = useCallback(id => {
+    setTasks(prev => prev.map(t => t.id===id ? {...t,checked:!t.checked} : t));
+    setLists(prev => prev.map(l => ({...l, sections:l.sections.map(s => ({...s, tasks:s.tasks.map(t => t.id===id ? {...t,checked:!t.checked} : t)}))})));
+  }, []);
+
+  const updateTask = useCallback((id, upd) => {
+    setTasks(prev => prev.map(t => t.id===id ? {...t,...upd} : t));
+    setLists(prev => prev.map(l => ({...l, sections:l.sections.map(s => ({...s, tasks:s.tasks.map(t => t.id===id ? {...t,...upd} : t)}))})));
+  }, []);
+
+  const deleteTask = useCallback(id => {
+    setTasks(prev => prev.filter(t => t.id!==id));
+    setLists(prev => prev.map(l => ({...l, sections:l.sections.map(s => ({...s, tasks:s.tasks.filter(t => t.id!==id)}))})));
+  }, []);
+
+  const addTask = useCallback(payload => {
+    const newId = taskCounter + 1;
+    setTaskCounter(c => c+1);
+    const t = { id:newId, checked:false, ...payload };
+    if (payload._listId && payload._sectionId) {
+      setLists(prev => prev.map(l => l.id!==payload._listId ? l : {
+        ...l, sections: l.sections.map(s => s.id!==payload._sectionId ? s : {...s, tasks:[...s.tasks, t]})
+      }));
+    } else {
+      setTasks(prev => [t, ...prev]);
+    }
+  }, [taskCounter]);
+
+  const findTaskById = useCallback(id => {
+    const dt = tasks.find(t => t.id===id);
+    if (dt) return { task:dt, source:'dash', listName:'Dashboard' };
+    for (const l of lists) for (const sec of l.sections) {
+      const t = sec.tasks.find(x => x.id===id);
+      if (t) return { task:t, source:'list', listId:l.id, listName:l.name, sectionId:sec.id };
+    }
+    return null;
+  }, [tasks, lists]);
+
+  const addAIMessage = useCallback(msg => setAiMessages(prev => [...prev, msg]), []);
+
+  // ── Meeting actions ────────────────────────────────────────
+  const addMeeting = useCallback(payload => {
+    const id = `mt-${Date.now()}`;
+    setMeetings(prev => [...prev, { id, allDay:false, ...payload }]);
+    return id;
+  }, []);
+  const updateMeeting = useCallback((id, upd) => setMeetings(prev => prev.map(m => m.id===id ? {...m,...upd} : m)), []);
+  const deleteMeeting = useCallback(id => setMeetings(prev => prev.filter(m => m.id!==id)), []);
+
+  // ── Timeline actions ────────────────────────────────
+  const addTimeline = useCallback(payload => {
+    const id = `tl-${Date.now()}`;
+    const tl = { id, milestones:[], layout:'vertical', isPublic:false, shareEnabled:false, shareToken:null, shareHasPassword:false, shareExpiresAt:null, ...payload };
+    setTimelines(prev => [...prev, tl]);
+    return id;
+  }, []);
+  const updateTimeline = useCallback((id, upd) => {
+    setTimelines(prev => prev.map(t => t.id===id ? {...t,...upd} : t));
+  }, []);
+  const deleteTimeline = useCallback(id => setTimelines(prev => prev.filter(t => t.id!==id)), []);
+  const addMilestone = useCallback((tlId, m) => {
+    const mid = `ms-${Date.now()}`;
+    setTimelines(prev => prev.map(t => t.id!==tlId ? t : {...t, milestones:[...t.milestones, {id:mid, status:'upcoming', ...m}]}));
+  }, []);
+  const updateMilestone = useCallback((tlId, mid, upd) => {
+    setTimelines(prev => prev.map(t => t.id!==tlId ? t : {...t, milestones:t.milestones.map(m => m.id===mid ? {...m,...upd} : m)}));
+  }, []);
+  const deleteMilestone = useCallback((tlId, mid) => {
+    setTimelines(prev => prev.map(t => t.id!==tlId ? t : {...t, milestones:t.milestones.filter(m => m.id!==mid)}));
+  }, []);
+
+  // ── Workspace actions ─────────────────────────────
+  const addWorkspace = useCallback(payload => {
+    const id = `ws-${Date.now()}`;
+    const ws = { id, role:'owner', memberCount:1+(payload.members?.length||0),
+      members:[{userId:'u1', username:'alex_admin', fullName:'Alex Mendez', role:'owner'}, ...(payload.members||[])], ...payload };
+    setWorkspaces(prev => [...prev, ws]);
+    return id;
+  }, []);
+
+  // ── List actions ────────────────────────────────
+  const updateList = useCallback((id, upd) => {
+    setLists(prev => prev.map(l => l.id===id ? {...l,...upd} : l));
+  }, []);
+  const addSublist = useCallback((parentTaskId, name) => {
+    const id = `sublist-${Date.now()}`;
+    const sub = { id, name:name||'Sublist', emoji:'🗂️', subtitle:'Sublist', color:'#5e4dbb', colorBg:'#F5F3FF',
+      parentTaskId, depth:1, isPublic:false, sections:[{id:`sec-${Date.now()}`, label:'Checklist', emoji:'✅', tasks:[]}] };
+    setLists(prev => [...prev, sub]);
+    updateTask(parentTaskId, { linkedListId:id, linkedListType:'sublist' });
+    return id;
+  }, [updateTask]);
+
+  // Expose nav imperatively for prototyping tools
+  useEffect(() => {
+    window._sc = { setScreen, setModal, setCurrentListId, setCurrentFolderId };
+  }, [setScreen, setModal, setCurrentListId, setCurrentFolderId]);
+
+  const ctx = {
+    screen, setScreen, modal, setModal,
+    tasks, setTasks, lists, setLists, folders, setFolders,
+    files, setFiles, workspaces, currentWorkspaceId, setCurrentWorkspaceId,
+    meetings, setMeetings, addMeeting, updateMeeting, deleteMeeting,
+    setWorkspaces, addWorkspace,
+    timelines, setTimelines, addTimeline, updateTimeline, deleteTimeline,
+    addMilestone, updateMilestone, deleteMilestone,
+    selectedTimelineId, setSelectedTimelineId,
+    updateList, addSublist,
+    modalData, setModalData,
+    aiMessages, setAiMessages, addAIMessage,
+    trash, setTrash,
+    currentListId, setCurrentListId,
+    currentFolderId, setCurrentFolderId,
+    currentPreviewFile, setCurrentPreviewFile,
+    selectedTaskId, setSelectedTaskId,
+    taskFilter, setTaskFilter,
+    profile, setProfile,
+    toggleTask, updateTask, deleteTask, addTask, findTaskById,
+  };
+
+  return (
+    <AppCtx.Provider value={ctx}>
+      <window.PhoneFrame>
+        <window.AppShell />
+      </window.PhoneFrame>
+      <window.SideRail />
+      <TweaksPanel title="Solytiq iOS">
+        <TweakSection label="Color"/>
+        <TweakColor label="Palette" value={t.palette}
+          options={[
+            ['#5e4dbb','#9d8dff','#F5F3FF','#ede9ff','#fdf8ff'],
+            ['#2563EB','#60a5fa','#eff6ff','#dbeafe','#f8fbff'],
+            ['#059669','#34d399','#ecfdf5','#d1fae5','#f7fdf9'],
+            ['#db2777','#f472b6','#fdf2f8','#fce7f3','#fffbfc'],
+          ]}
+          onChange={v=>setTweak('palette',v)}/>
+        <TweakSection label="Shape"/>
+        <TweakRadio label="Corner style" value={t.shape}
+          options={['sharp','rounded','bubbly']}
+          onChange={v=>setTweak('shape',v)}/>
+        <TweakSection label="Density"/>
+        <TweakRadio label="Spacing" value={t.density}
+          options={['compact','regular','airy']}
+          onChange={v=>setTweak('density',v)}/>
+      </TweaksPanel>
+    </AppCtx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

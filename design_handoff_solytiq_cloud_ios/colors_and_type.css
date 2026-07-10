@@ -1,0 +1,435 @@
+/*
+ * Solytiq Cloud — Design Tokens
+ * Design Language: "Luminous List"
+ * Version: 1.1.0
+ *
+ * Fonts:
+ *   - Hanken Grotesk (headings, labels, nav): https://fonts.google.com/specimen/Hanken+Grotesk
+ *   - Inter (body, captions): https://fonts.google.com/specimen/Inter
+ *   - Material Symbols Outlined (icons): https://fonts.google.com/icons
+ *
+ * Usage in HTML:
+ *   <link rel="preconnect" href="https://fonts.googleapis.com">
+ *   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ *   <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+ *   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+ */
+
+/* ─────────────────────────────────────────
+   FONT FACES — local variable fonts
+   (Google Fonts fallback kept for Material Symbols only)
+───────────────────────────────────────── */
+
+/* Hanken Grotesk — upright */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  src: url('fonts/HankenGrotesk-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Hanken Grotesk — italic */
+@font-face {
+  font-family: 'Hanken Grotesk';
+  src: url('fonts/HankenGrotesk-Italic-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Inter — upright (optical-size + weight axes) */
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter-VariableFont_opsz_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Inter — italic */
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter-Italic-VariableFont_opsz_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Material Symbols — icon font, CDN only */
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+/* ─────────────────────────────────────────
+   COLOR TOKENS
+───────────────────────────────────────── */
+:root {
+
+  /* ── Brand / Primary ── */
+  --color-primary:                 #5e4dbb;   /* Main CTA, active states, nav active */
+  --color-primary-dim:             #c8bfff;   /* Inverse/dim contexts */
+  --color-on-primary:              #ffffff;   /* Text on primary bg */
+  --color-primary-container:       #9d8dff;   /* Soft accent (logo middle band) */
+  --color-on-primary-container:    #321b8e;   /* Text on primary-container */
+  --color-primary-fixed:           #e5deff;   /* Chip/badge fill */
+  --color-primary-fixed-dim:       #c8bfff;   /* Subtle hover ring */
+  --color-surface-tint:            #5e4dbb;   /* Tonal tint = same as primary */
+  --color-lavender-tint:           #F5F3FF;   /* Task row hover bg */
+
+  /* ── Secondary (Yellow) ── */
+  --color-secondary:               #6e5e0d;   /* Text on yellow surfaces */
+  --color-on-secondary:            #ffffff;
+  --color-secondary-container:     #f6df84;   /* Yellow chip fill */
+  --color-on-secondary-container:  #726212;
+  --color-secondary-fixed:         #f9e287;   /* Badge tint */
+  --color-secondary-fixed-dim:     #dcc66e;
+  --color-yellow-tint:             #FEFCE8;   /* Card yellow section bg */
+
+  /* ── Surface Scale ── */
+  --color-surface:                 #fdf8ff;   /* Main page background */
+  --color-surface-dim:             #ddd8e2;   /* Disabled states */
+  --color-surface-bright:          #fdf8ff;   /* Alias for surface */
+  --color-surface-variant:         #e5e1eb;   /* Alternate surface */
+  --color-surface-muted:           #F9FAFB;   /* Card backgrounds */
+  --color-surface-container-lowest:#ffffff;   /* Pure white (inputs, cards) */
+  --color-surface-container-low:   #f7f2fc;   /* Sidebar background */
+  --color-surface-container:       #f1ecf6;   /* Hover in sidebar */
+  --color-surface-container-high:  #ebe6f0;   /* Search bar fill */
+  --color-surface-container-highest:#e5e1eb;  /* Dividers */
+
+  /* ── On-Surface Text ── */
+  --color-on-surface:              #1c1b22;   /* Primary text */
+  --color-on-surface-variant:      #484552;   /* Secondary text, labels */
+  --color-on-background:           #1c1b22;
+  --color-background:              #fdf8ff;
+
+  /* ── Inverse ── */
+  --color-inverse-surface:         #312f37;
+  --color-inverse-on-surface:      #f4eff9;
+  --color-inverse-primary:         #c8bfff;
+
+  /* ── Outline / Borders ── */
+  --color-outline:                 #787584;   /* Placeholder text, icons */
+  --color-outline-variant:         #c9c4d5;   /* Checkbox border inactive */
+  --color-border-subtle:           #E5E7EB;   /* Standard 1px borders */
+
+  /* ── Functional / Status ── */
+  --color-success:                 #10B981;   /* SYNCED badge, checked checkboxes */
+  --color-success-green:           #10B981;   /* Alias */
+  --color-warning:                 #ea580c;   /* Warning badges, low progress */
+  --color-info:                    #1D4ED8;   /* Tip badges (Empfehlung) */
+  --color-error:                   #ba1a1a;
+  --color-on-error:                #ffffff;
+  --color-error-container:         #ffdad6;
+  --color-on-error-container:      #93000a;
+
+  /* ── Tertiary (Gray) ── */
+  --color-tertiary:                #5e5e5e;   /* Section title text */
+  --color-on-tertiary:             #ffffff;
+  --color-tertiary-container:      #9c9c9c;
+  --color-on-tertiary-container:   #343434;
+  --color-tertiary-fixed:          #e2e2e2;
+  --color-tertiary-fixed-dim:      #c6c6c6;
+
+
+  /* ─────────────────────────────────────────
+     SEMANTIC ALIASES
+  ───────────────────────────────────────── */
+  --bg-page:          var(--color-surface);
+  --bg-sidebar:       var(--color-surface-container-low);
+  --bg-card:          var(--color-surface-muted);
+  --bg-input:         var(--color-surface-container-high);
+  --bg-hover-nav:     var(--color-surface-container);
+  --bg-hover-task:    var(--color-lavender-tint);
+  --bg-active-nav:    var(--color-primary-fixed);
+
+  --text-primary-label:  var(--color-primary);
+  --text-heading:        var(--color-on-surface);
+  --text-body:           var(--color-on-surface-variant);
+  --text-caption:        var(--color-outline);
+  --text-placeholder:    var(--color-outline-variant);
+
+  --border-default:   var(--color-border-subtle);
+  --border-focus:     var(--color-primary);
+  --border-active:    var(--color-primary);
+
+
+  /* ─────────────────────────────────────────
+     TYPOGRAPHY TOKENS
+  ───────────────────────────────────────── */
+
+  /* Font Families */
+  --font-display:   'Hanken Grotesk', sans-serif;
+  --font-body:      'Inter', sans-serif;
+
+  /* Display / Hero — "Welcome Back" */
+  --type-display-font:     var(--font-display);
+  --type-display-size:     32px;
+  --type-display-weight:   700;
+  --type-display-lh:       1.2;
+  --type-display-ls:       -0.02em;
+
+  /* Display Mobile */
+  --type-display-mobile-size:   26px;
+  --type-display-mobile-weight: 700;
+
+  /* Headline Medium — Page titles, card headers */
+  --type-headline-font:    var(--font-display);
+  --type-headline-size:    20px;
+  --type-headline-weight:  600;
+  --type-headline-lh:      1.4;
+
+  /* Section Title — ALL CAPS nav anchors */
+  --type-section-font:     var(--font-display);
+  --type-section-size:     13px;
+  --type-section-weight:   700;
+  --type-section-lh:       1.5;
+  --type-section-ls:       0.06em;
+  --type-section-transform: uppercase;
+
+  /* Label Medium — Buttons, nav items, form labels */
+  --type-label-font:       var(--font-display);
+  --type-label-size:       14px;
+  --type-label-weight:     600;
+  --type-label-lh:         1.2;
+
+  /* Body Large — Main task titles */
+  --type-body-lg-font:     var(--font-body);
+  --type-body-lg-size:     16px;
+  --type-body-lg-weight:   400;
+  --type-body-lg-lh:       1.5;
+
+  /* Body Medium — Sub-nav, notes */
+  --type-body-font:        var(--font-body);
+  --type-body-size:        14px;
+  --type-body-weight:      400;
+  --type-body-lh:          1.5;
+
+  /* Caption — Metadata, timestamps, footer */
+  --type-caption-font:     var(--font-body);
+  --type-caption-size:     12px;
+  --type-caption-weight:   400;
+  --type-caption-lh:       1.4;
+
+  /* Badge Text — Inside status pills */
+  --type-badge-font:       var(--font-body);
+  --type-badge-size:       11px;
+  --type-badge-weight:     700;
+  --type-badge-ls:         0.06em;
+  --type-badge-transform:  uppercase;
+
+
+  /* ─────────────────────────────────────────
+     SPACING TOKENS
+  ───────────────────────────────────────── */
+  --space-1:   4px;   /* baseline unit */
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+
+  --space-page-margin:    24px;   /* horizontal page padding */
+  --space-stack-item:      8px;   /* vertical gap between task items */
+  --space-stack-section:  32px;   /* gap between major sections */
+  --space-gutter-list:    12px;   /* vertical gap between list items */
+  --space-sidebar-width: 256px;   /* fixed sidebar width */
+  --space-topbar-height:  64px;   /* sticky top bar height */
+  --space-container-max: 680px;   /* content column max width */
+
+
+  /* ─────────────────────────────────────────
+     SHAPE / RADIUS TOKENS
+  ───────────────────────────────────────── */
+  --radius-sm:       4px;     /* tiny (chips within items) */
+  --radius-default:  8px;     /* ROUND_EIGHT — buttons, inputs, modals */
+  --radius-md:       12px;    /* dashboard bento cards */
+  --radius-lg:       16px;    /* modals, settings rows */
+  --radius-xl:       20px;    /* large cards */
+  --radius-2xl:      16px;    /* brand logo mark */
+  --radius-checkbox:  5px;    /* task checkboxes */
+  --radius-pill:    9999px;   /* search bar, badges */
+
+
+  /* ─────────────────────────────────────────
+     ELEVATION / SHADOW TOKENS
+  ───────────────────────────────────────── */
+  --shadow-none:    none;
+  --shadow-subtle:  0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-card:    0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-modal:   0 4px 24px rgba(0, 0, 0, 0.12);
+  --shadow-focus:   0 0 0 2px var(--color-primary);
+
+  /* Glassmorphism (top bar only) */
+  --glass-bg:       rgba(253, 248, 255, 0.80);
+  --glass-blur:     blur(12px); /* @kind other */
+
+
+  /* ─────────────────────────────────────────
+     TRANSITION TOKENS
+  ───────────────────────────────────────── */
+  --transition-hover:    200ms ease-in-out; /* @kind other */
+  --transition-checkbox: 150ms ease-in-out; /* @kind other */
+  --transition-spring:   cubic-bezier(0.34, 1.56, 0.64, 1); /* @kind other */
+}
+
+
+/* ─────────────────────────────────────────
+   BASE STYLES
+───────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-lh);
+  color: var(--color-on-surface);
+  background-color: var(--color-surface);
+}
+
+
+/* ─────────────────────────────────────────
+   SEMANTIC TYPE CLASSES
+───────────────────────────────────────── */
+
+/* Display — hero headings */
+.type-display {
+  font-family: var(--type-display-font);
+  font-size: var(--type-display-size);
+  font-weight: var(--type-display-weight);
+  line-height: var(--type-display-lh);
+  letter-spacing: var(--type-display-ls);
+  color: var(--color-on-surface);
+}
+
+/* Headline — page/card titles */
+.type-headline {
+  font-family: var(--type-headline-font);
+  font-size: var(--type-headline-size);
+  font-weight: var(--type-headline-weight);
+  line-height: var(--type-headline-lh);
+  color: var(--color-on-surface);
+}
+
+/* Section title — ALL CAPS anchors */
+.type-section {
+  font-family: var(--type-section-font);
+  font-size: var(--type-section-size);
+  font-weight: var(--type-section-weight);
+  line-height: var(--type-section-lh);
+  letter-spacing: var(--type-section-ls);
+  text-transform: var(--type-section-transform);
+  color: var(--color-tertiary);
+}
+
+/* Label — buttons, nav items, form labels */
+.type-label {
+  font-family: var(--type-label-font);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-lh);
+}
+
+/* Body large — task titles */
+.type-body-lg {
+  font-family: var(--type-body-lg-font);
+  font-size: var(--type-body-lg-size);
+  font-weight: var(--type-body-lg-weight);
+  line-height: var(--type-body-lg-lh);
+}
+
+/* Body medium — notes, sub-nav */
+.type-body {
+  font-family: var(--type-body-font);
+  font-size: var(--type-body-size);
+  font-weight: var(--type-body-weight);
+  line-height: var(--type-body-lh);
+}
+
+/* Caption — metadata, timestamps */
+.type-caption {
+  font-family: var(--type-caption-font);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  line-height: var(--type-caption-lh);
+  color: var(--color-outline);
+}
+
+/* Badge / status pill text */
+.type-badge {
+  font-family: var(--type-badge-font);
+  font-size: var(--type-badge-size);
+  font-weight: var(--type-badge-weight);
+  letter-spacing: var(--type-badge-ls);
+  text-transform: var(--type-badge-transform);
+}
+
+
+/* ─────────────────────────────────────────
+   MATERIAL SYMBOLS SETUP
+───────────────────────────────────────── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.material-symbols-outlined.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+
+/* ─────────────────────────────────────────
+   CUSTOM CHECKBOX (Luminous List style)
+───────────────────────────────────────── */
+.lumina-checkbox {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--color-outline-variant);
+  border-radius: var(--radius-checkbox);
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-content: center;
+  transition: all var(--transition-checkbox);
+  flex-shrink: 0;
+}
+
+.lumina-checkbox::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  background: white;
+}
+
+.lumina-checkbox:checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.lumina-checkbox:checked::before {
+  transform: scale(1);
+}
+
+
+/* ─────────────────────────────────────────
+   SCROLLBAR (clean look)
+───────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-surface-variant); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-outline-variant); }

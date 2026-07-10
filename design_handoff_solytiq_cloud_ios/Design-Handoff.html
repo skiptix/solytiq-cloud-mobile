@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solytiq Cloud — iOS Design Handoff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="colors_and_type.css">
+<style>
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: var(--font-body); background: var(--color-surface); color: var(--color-on-surface); }
+
+  .shell { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 100vh; }
+
+  /* ── Sidebar ── */
+  nav.toc {
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    background: var(--color-surface-container-low); border-right: 1px solid var(--color-border-subtle);
+    padding: 28px 18px 40px;
+  }
+  .toc-brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 22px; }
+  .toc-brand .mark { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(160deg, #f6df84 0%, #9d8dff 55%, #2b2154 100%); flex-shrink: 0; }
+  .toc-brand .txt { font-family: var(--font-display); font-weight: 700; font-size: 14.5px; line-height: 1.25; }
+  .toc-brand .txt span { display: block; font-family: var(--font-body); font-weight: 500; font-size: 11px; color: var(--color-outline); }
+  nav.toc a {
+    display: block; padding: 7px 10px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    color: var(--color-on-surface-variant); text-decoration: none; margin-bottom: 1px;
+  }
+  nav.toc a:hover { background: var(--color-surface-container); color: var(--color-on-surface); }
+  nav.toc .grp { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-outline); padding: 16px 10px 6px; }
+  nav.toc .grp:first-of-type { padding-top: 4px; }
+
+  /* ── Main content ── */
+  main { padding: 56px 64px 120px; max-width: 900px; min-width: 0; }
+  section { margin-bottom: 72px; scroll-margin-top: 24px; }
+  .kicker { font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-primary); margin-bottom: 8px; }
+  h1 { font-family: var(--font-display); font-size: 40px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 10px; }
+  h2 { font-family: var(--font-display); font-size: 24px; font-weight: 700; letter-spacing: -0.015em; margin: 0 0 6px; padding-top: 6px; border-top: 1px solid var(--color-border-subtle); padding-bottom: 0; }
+  section > h2:first-child, header h2 { border-top: none; }
+  h3 { font-family: var(--font-display); font-size: 15.5px; font-weight: 700; margin: 28px 0 10px; color: var(--color-on-surface); }
+  p { font-size: 14.5px; line-height: 1.65; color: var(--color-on-surface-variant); margin: 0 0 14px; max-width: 640px; }
+  .lede { font-size: 16px; color: var(--color-on-surface-variant); max-width: 620px; }
+  a { color: var(--color-primary); }
+  a:hover { color: var(--color-primary-container); }
+  code, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12.5px; }
+  code { background: var(--color-surface-container-high); padding: 2px 6px; border-radius: 5px; color: var(--color-on-surface); }
+  pre { background: #1c1b22; color: #e9e4f2; border-radius: 12px; padding: 16px 18px; overflow-x: auto; font-size: 12.5px; line-height: 1.6; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  pre .c { color: #9d8dff; }
+
+  header.hero { padding-bottom: 32px; border-bottom: 1px solid var(--color-border-subtle); margin-bottom: 48px; }
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  .pill { font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 9999px; background: var(--color-primary-fixed); color: var(--color-on-primary-container); }
+  .pill.alt { background: var(--color-secondary-fixed); color: var(--color-on-secondary-container); }
+  .pill.green { background: #ECFDF5; color: #0d7a56; }
+
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 8px; font-size: 13px; }
+  th { text-align: left; font-family: var(--font-display); font-weight: 700; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-outline); padding: 8px 12px; border-bottom: 1.5px solid var(--color-border-subtle); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--color-border-subtle); vertical-align: top; color: var(--color-on-surface-variant); }
+  td:first-child { font-weight: 600; color: var(--color-on-surface); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+
+  .grid-swatch { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 14px 0 8px; }
+  .swatch { border: 1px solid var(--color-border-subtle); border-radius: 12px; overflow: hidden; background: #fff; }
+  .swatch .chip { height: 56px; }
+  .swatch .meta { padding: 9px 11px; }
+  .swatch .meta .name { font-size: 12px; font-weight: 600; }
+  .swatch .meta .hex { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-outline); }
+
+  .type-sample { display: flex; align-items: baseline; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--color-border-subtle); }
+  .type-sample:last-child { border-bottom: none; }
+  .type-sample .label { width: 150px; flex-shrink: 0; font-size: 11px; font-weight: 700; color: var(--color-outline); text-transform: uppercase; letter-spacing: 0.05em; }
+  .type-sample .spec { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-outline); white-space: nowrap; }
+
+  .space-row { display: flex; align-items: center; gap: 14px; padding: 7px 0; }
+  .space-row .bar { background: var(--color-primary); height: 10px; border-radius: 3px; }
+  .space-row .lbl { width: 90px; font-family: 'JetBrains Mono', monospace; font-size: 12px; flex-shrink: 0; }
+  .space-row .val { font-size: 12px; color: var(--color-outline); }
+
+  .radius-row { display: flex; gap: 18px; flex-wrap: wrap; margin: 14px 0; }
+  .radius-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .radius-item .box { width: 64px; height: 64px; background: var(--color-primary-fixed); border: 1.5px solid var(--color-primary-container); }
+  .radius-item .lbl { font-size: 11px; font-weight: 600; text-align: center; }
+
+  .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin: 14px 0; }
+  .icon-item { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 8px; background: var(--color-surface-muted); border: 1px solid var(--color-border-subtle); border-radius: 12px; }
+  .icon-item .material-symbols-outlined { font-size: 22px; color: var(--color-primary); }
+  .icon-item .nm { font-size: 10.5px; font-family: 'JetBrains Mono', monospace; color: var(--color-outline); text-align: center; word-break: break-word; }
+
+  .callout { background: var(--color-primary-fixed); border: 1px solid var(--color-primary-container); border-radius: 14px; padding: 16px 18px; margin: 16px 0; }
+  .callout p { color: var(--color-on-primary-container); margin: 0; font-size: 13.5px; }
+  .callout strong { color: var(--color-on-primary-container); }
+  .callout.warn { background: #fff7ed; border-color: #fed7aa; }
+  .callout.warn p { color: #9a3412; }
+
+  .filemap { background: var(--color-surface-muted); border: 1px solid var(--color-border-subtle); border-radius: 14px; padding: 18px 20px; }
+  .filemap .row { display: flex; gap: 14px; padding: 6px 0; font-size: 12.5px; }
+  .filemap .row .f { font-family: 'JetBrains Mono', monospace; color: var(--color-primary); font-weight: 600; width: 220px; flex-shrink: 0; }
+  .filemap .row .d { color: var(--color-on-surface-variant); }
+
+  .anim-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; }
+  .anim-list .row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--color-border-subtle); font-size: 12.5px; }
+  .anim-list .row .k { font-family: 'JetBrains Mono', monospace; color: var(--color-on-surface); }
+  .anim-list .row .v { color: var(--color-outline); text-align: right; }
+
+  .frame-diagram { display: flex; gap: 40px; align-items: flex-start; margin: 20px 0; flex-wrap: wrap; }
+  .phone-mini { width: 168px; height: 364px; border-radius: 26px; background: #14102a; padding: 5px; box-shadow: 0 20px 50px rgba(0,0,0,0.28); flex-shrink: 0; }
+  .phone-mini .screen { width: 100%; height: 100%; border-radius: 21px; background: linear-gradient(160deg,#ede9ff 0%,#fdf8ff 55%,#fff0f9 100%); position: relative; overflow: hidden; }
+  .phone-mini .notch { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 54px; height: 15px; border-radius: 100px; background: #060310; }
+  .phone-mini .statustxt { position: absolute; top: 9px; left: 14px; font-size: 8px; font-weight: 700; color: #1c1b22; }
+  .phone-mini .home { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 56px; height: 3px; border-radius: 100px; background: rgba(28,27,34,0.36); }
+  .anno { font-size: 12.5px; color: var(--color-on-surface-variant); }
+  .anno ul { margin: 8px 0 0; padding-left: 18px; }
+  .anno li { margin-bottom: 6px; }
+
+  .comp-list { columns: 2; column-gap: 40px; }
+  .comp-list li { font-size: 13px; margin-bottom: 5px; break-inside: avoid; }
+  .comp-list code { font-size: 11.5px; }
+
+  footer { padding: 40px 64px; border-top: 1px solid var(--color-border-subtle); font-size: 12px; color: var(--color-outline); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<nav class="toc">
+  <div class="toc-brand">
+    <div class="mark"></div>
+    <div class="txt">Solytiq Cloud<span>iOS · Design Handoff</span></div>
+  </div>
+
+  <div class="grp">Start Here</div>
+  <a href="#overview">Overview</a>
+  <a href="#filemap">File Map &amp; Setup</a>
+  <a href="#architecture">Frontend Architecture</a>
+
+  <div class="grp">Visual Foundations</div>
+  <a href="#colors">Color</a>
+  <a href="#type">Typography</a>
+  <a href="#spacing">Spacing</a>
+  <a href="#radius">Radius &amp; Shape</a>
+  <a href="#icons">Iconography</a>
+
+  <div class="grp">Device &amp; Chrome</div>
+  <a href="#frame">Device Frame</a>
+  <a href="#nav">Navigation Chrome</a>
+
+  <div class="grp">Screens &amp; Flows</div>
+  <a href="#screens">Screen Inventory</a>
+  <a href="#sheets">Sheets &amp; Modals</a>
+
+  <div class="grp">Components</div>
+  <a href="#components">Component Library</a>
+
+  <div class="grp">Motion</div>
+  <a href="#motion">Animation &amp; Interaction</a>
+
+  <div class="grp">Build</div>
+  <a href="#tweaks">Tweaks System</a>
+  <a href="#handoff">Dev Handoff Notes</a>
+</nav>
+
+<main>
+
+<header class="hero" id="overview">
+  <div class="kicker">Design Handoff · v2 Prototype</div>
+  <h1>Solytiq Cloud — iOS</h1>
+  <p class="lede">This is the complete design + build reference for the <strong>Solytiq Cloud iOS</strong> UI kit — a mobile-native rendition of the "Luminous List" design language, built as a self-contained React prototype at <code>ui_kits/solytiq-cloud-ios/</code>. Use this doc to hand the kit to designers (visual language, spacing, states) and developers (component API, file structure, tokens) without needing to reverse-engineer the source.</p>
+  <div class="badge-row">
+    <span class="pill">Design language: Luminous List</span>
+    <span class="pill alt">Platform: iOS / mobile web</span>
+    <span class="pill green">Status: Prototype — ready for native handoff</span>
+  </div>
+</header>
+
+<section id="filemap">
+  <h2>File Map &amp; Setup</h2>
+  <p>The iOS kit is a standalone folder, independent from the desktop/web kit (<code>ui_kits/solytiq-cloud/</code>). Every file below lives at <code>ui_kits/solytiq-cloud-ios/</code>.</p>
+  <div class="filemap">
+    <div class="row"><div class="f">index.html</div><div class="d">Document shell — CSS custom properties, keyframes, script load order, seed data, root <code>&lt;App/&gt;</code>, Tweaks wiring.</div></div>
+    <div class="row"><div class="f">components.jsx</div><div class="d">Core primitives: SFSymbol, PhoneFrame, NavHeader, TaskRow, QuickAdd, StatCard, Card, SectionHeader, EmptyRow, Badge, FileBadge, StorageBar, FloatingTabBar, AddFloatBtn, ProfileBtn, SideRail.</div></div>
+    <div class="row"><div class="f">sheets.jsx</div><div class="d">Bottom-sheet modals: task detail/edit, add-choice, add folder/list, lists drawer, settings, AI assistant, trash, file preview, filters.</div></div>
+    <div class="row"><div class="f">screens.jsx</div><div class="d">Full-page screens: Welcome, Login, Dashboard, List, Scheduled, Files, Folder dashboard, Lists index, plus the <code>AppShell</code> router.</div></div>
+    <div class="row"><div class="f">features.jsx</div><div class="d">Extended feature set: Timelines (list + detail), workspace switcher/wizard, item-settings, 2FA setup sheet.</div></div>
+    <div class="row"><div class="f">calendar.jsx</div><div class="d">Unified calendar screen (tasks + meetings + milestones) and its add/filter sheets.</div></div>
+    <div class="row"><div class="f">ios-frame.jsx</div><div class="d">A second, reusable "iOS 26 Liquid Glass" device-frame kit (status bar, glass nav pills, grouped lists, keyboard) for static mockups outside the live prototype.</div></div>
+    <div class="row"><div class="f">tweaks-panel.jsx</div><div class="d">Generic Tweaks-panel host protocol — palette / shape / density controls.</div></div>
+  </div>
+  <div class="callout">
+    <p><strong>Running it:</strong> open <code>index.html</code> directly — no build step. React 18 + Babel Standalone are loaded from unpkg with SRI hashes; every other file is a plain <code>&lt;script type="text/babel"&gt;</code> include, executed top-to-bottom in the order listed above.</p>
+  </div>
+</section>
+
+<section id="architecture">
+  <h2>Frontend Architecture</h2>
+  <p>No bundler, no JSX build step — this is an in-browser-transpiled prototype, intended to be the interaction/visual spec that a native iOS (SwiftUI) or React Native build should match pixel-for-pixel, not shipped as-is to production.</p>
+  <h3>Global namespace pattern</h3>
+  <p>Every file assigns its exports onto <code>window</code> instead of using ES modules, so plain <code>&lt;script&gt;</code> tags can share components without a bundler:</p>
+  <pre>Object.assign(window, {
+  SFSymbol, PhoneFrame, NavHeader, TaskRow, <span class="c">/* … */</span>
+});</pre>
+  <p>State lives in one root <code>App</code> component in <code>index.html</code> (seed data for tasks / lists / folders / files / meetings / workspaces / timelines), passed down through a single <code>AppCtx</code> React context, read anywhere via <code>window.useApp()</code>. Screens/sheets read and mutate this context directly — there is no separate store library.</p>
+  <h3>Screen &amp; sheet routing</h3>
+  <p><code>AppShell</code> (bottom of <code>screens.jsx</code>) is the router: <code>app.screen</code> selects the current full-screen view from a lookup map, <code>app.modal</code> selects the active bottom sheet from a second lookup map. Setting either is as simple as <code>app.setScreen('list')</code> or <code>app.setModal('edit-task')</code> — both exposed on the shared context.</p>
+</section>
+
+<section id="colors">
+  <h2>Color</h2>
+  <p>The iOS kit defines its own scoped CSS variables (<code>--sc-*</code>, in <code>index.html</code>) rather than importing <code>colors_and_type.css</code> directly, but the values are the same brand palette — kept in lockstep so native and web stay visually identical. Reference token names on the left map 1:1 to the design system's canonical tokens on the right.</p>
+  <div class="grid-swatch">
+    <div class="swatch"><div class="chip" style="background:#5e4dbb"></div><div class="meta"><div class="name">--sc-primary</div><div class="hex">#5e4dbb</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#9d8dff"></div><div class="meta"><div class="name">--sc-primary-soft</div><div class="hex">#9d8dff</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#F5F3FF;border-bottom:1px solid #e9e4f2"></div><div class="meta"><div class="name">--sc-primary-bg</div><div class="hex">#F5F3FF</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#ede9ff"></div><div class="meta"><div class="name">--sc-primary-bg-2</div><div class="hex">#ede9ff</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#fdf8ff;border-bottom:1px solid #e9e4f2"></div><div class="meta"><div class="name">--sc-page</div><div class="hex">#fdf8ff</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#ffffff;border-bottom:1px solid #e9e4f2"></div><div class="meta"><div class="name">--sc-card</div><div class="hex">#ffffff</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#f7f2fc"></div><div class="meta"><div class="name">--sc-tinted</div><div class="hex">#f7f2fc</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#f1ecf6"></div><div class="meta"><div class="name">--sc-hover</div><div class="hex">#f1ecf6</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#e9e4f2"></div><div class="meta"><div class="name">--sc-border</div><div class="hex">#e9e4f2</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#1c1b22"></div><div class="meta"><div class="name">--sc-text</div><div class="hex">#1c1b22</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#484552"></div><div class="meta"><div class="name">--sc-text-2</div><div class="hex">#484552</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#787584"></div><div class="meta"><div class="name">--sc-text-3</div><div class="hex">#787584</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#b0acbe"></div><div class="meta"><div class="name">--sc-text-4</div><div class="hex">#b0acbe</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#10B981"></div><div class="meta"><div class="name">--sc-success</div><div class="hex">#10B981</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#ea580c"></div><div class="meta"><div class="name">--sc-warning</div><div class="hex">#ea580c</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#ba1a1a"></div><div class="meta"><div class="name">--sc-danger</div><div class="hex">#ba1a1a</div></div></div>
+    <div class="swatch"><div class="chip" style="background:#1D4ED8"></div><div class="meta"><div class="name">--sc-info</div><div class="hex">#1D4ED8</div></div></div>
+  </div>
+  <h3>Badge / tag colors</h3>
+  <table>
+    <tr><th>Badge</th><th>Background</th><th>Foreground</th><th>Used for</th></tr>
+    <tr><td>Work</td><td class="mono">#fff5d6</td><td class="mono">#6e5e0d</td><td>Work-tagged tasks</td></tr>
+    <tr><td>Personal</td><td class="mono">#F5F3FF</td><td class="mono">#5e4dbb</td><td>Personal-tagged tasks</td></tr>
+    <tr><td>Urgent</td><td class="mono">#ffdad6</td><td class="mono">#ba1a1a</td><td>Urgent-tagged tasks</td></tr>
+    <tr><td>Tip</td><td class="mono">#eff6ff</td><td class="mono">#1D4ED8</td><td>Informational tips</td></tr>
+  </table>
+  <h3>Priority dots</h3>
+  <table>
+    <tr><th>Priority</th><th>Color</th></tr>
+    <tr><td>High</td><td class="mono">#ea580c</td></tr>
+    <tr><td>Medium</td><td class="mono">#f59e0b</td></tr>
+    <tr><td>Low</td><td class="mono">#787584</td></tr>
+  </table>
+  <div class="callout">
+    <p>Full semantic token list (primary/secondary containers, surface scale, elevation, motion curves) is authoritative in <a href="colors_and_type.css">colors_and_type.css</a> at the design-system root — treat the <code>--sc-*</code> names above as the mobile-scoped aliases of those tokens.</p>
+  </div>
+</section>
+
+<section id="type">
+  <h2>Typography</h2>
+  <p>The iOS kit leans on the native iOS system font stack first, falling back to the brand's web fonts — this keeps the prototype feeling like a real iOS surface while staying brand-consistent if rendered outside iOS.</p>
+  <pre>--sc-font:      -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+                "Hanken Grotesk", "Inter", system-ui, sans-serif;
+--sc-font-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;</pre>
+  <div class="type-sample"><div class="label">Large title</div><div style="font-weight:700;font-size:30px;letter-spacing:-0.025em;">Dashboard</div><div class="spec">30px / 700 / -0.025em</div></div>
+  <div class="type-sample"><div class="label">Nav bar title</div><div style="font-weight:600;font-size:16px;">List name</div><div class="spec">16px / 600</div></div>
+  <div class="type-sample"><div class="label">Card headline</div><div style="font-weight:700;font-size:22px;letter-spacing:-0.015em;">Backyard 2026</div><div class="spec">22px / 700 / -0.015em</div></div>
+  <div class="type-sample"><div class="label">Body / task title</div><div style="font-weight:400;font-size:14px;">Finalize Q3 Marketing Report</div><div class="spec">14–15px / 400–600</div></div>
+  <div class="type-sample"><div class="label">Section header</div><div style="font-weight:700;font-size:10px;letter-spacing:0.09em;text-transform:uppercase;color:#787584;">Due Today</div><div class="spec">10px / 700 / 0.09em / caps</div></div>
+  <div class="type-sample"><div class="label">Caption / meta</div><div style="font-weight:400;font-size:11px;color:#787584;">2 tasks due today</div><div class="spec">11–12px / 400–500</div></div>
+  <div class="type-sample"><div class="label">Numeric / mono</div><div class="mono" style="font-weight:700;font-size:20px;">72%</div><div class="spec">tabular-nums via .sc-mono</div></div>
+  <p>Numeric values that should not visually jitter as digits change (percentages, counters, dates) get the <code>.sc-mono</code> class, which applies <code>font-feature-settings: "tnum"</code> for tabular figures.</p>
+</section>
+
+<section id="spacing">
+  <h2>Spacing</h2>
+  <p>Two tweakable "density" presets control padding rhythm app-wide (see <a href="#tweaks">Tweaks System</a>); the values below are the default (<strong>regular</strong>) density.</p>
+  <div class="space-row"><div class="lbl">row-py: 11px</div><div class="bar" style="width:11px"></div><div class="val">Vertical padding inside each task/list row</div></div>
+  <div class="space-row"><div class="lbl">card-pad: 14px</div><div class="bar" style="width:14px"></div><div class="val">Internal card padding</div></div>
+  <div class="space-row"><div class="lbl">page margin: 18–22px</div><div class="bar" style="width:20px"></div><div class="val">Horizontal screen padding for cards/sections</div></div>
+  <div class="space-row"><div class="lbl">gap: 8–14px</div><div class="bar" style="width:10px"></div><div class="val">Default flex/grid gap between siblings</div></div>
+  <table>
+    <tr><th>Density preset</th><th>Row padding</th><th>Card padding</th></tr>
+    <tr><td>Compact</td><td>8px</td><td>10px</td></tr>
+    <tr><td>Regular (default)</td><td>11px</td><td>14px</td></tr>
+    <tr><td>Airy</td><td>16px</td><td>18px</td></tr>
+  </table>
+</section>
+
+<section id="radius">
+  <h2>Radius &amp; Shape</h2>
+  <p>Corner radius is also a Tweak-controlled system value (sharp / rounded / bubbly) — rounded is the shipped default.</p>
+  <div class="radius-row">
+    <div class="radius-item"><div class="box" style="border-radius:10px"></div><div class="lbl">--sc-r-sm<br>10px</div></div>
+    <div class="radius-item"><div class="box" style="border-radius:18px"></div><div class="lbl">--sc-r<br>18px (default)</div></div>
+    <div class="radius-item"><div class="box" style="border-radius:24px"></div><div class="lbl">--sc-r-lg<br>24px</div></div>
+    <div class="radius-item"><div class="box" style="border-radius:9999px"></div><div class="lbl">pill<br>9999px</div></div>
+  </div>
+  <table>
+    <tr><th>Shape preset</th><th>sm</th><th>default</th><th>lg</th></tr>
+    <tr><td>Sharp</td><td>5px</td><td>8px</td><td>12px</td></tr>
+    <tr><td>Rounded (default)</td><td>10px</td><td>18px</td><td>24px</td></tr>
+    <tr><td>Bubbly</td><td>18px</td><td>28px</td><td>36px</td></tr>
+  </table>
+  <p>Checkboxes are always an 8px squircle regardless of shape preset; badges/pills are always fully rounded.</p>
+</section>
+
+<section id="icons">
+  <h2>Iconography</h2>
+  <p>The iOS kit uses <strong>Material Symbols Rounded</strong> (not Outlined, as the web kit does) via the <code>SFSymbol</code> wrapper component — the rounded terminal reads closer to SF Symbols at small sizes on a phone screen.</p>
+  <pre>&lt;link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..700,0..1,-50..200&amp;display=swap" rel="stylesheet"&gt;</pre>
+  <table>
+    <tr><th>Prop</th><th>Type</th><th>Default</th><th>Notes</th></tr>
+    <tr><td>name</td><td>string</td><td>—</td><td>Material Symbols glyph name</td></tr>
+    <tr><td>size</td><td>number</td><td>17</td><td>Pixel font-size</td></tr>
+    <tr><td>color</td><td>string</td><td>inherit</td><td>Any CSS color / token</td></tr>
+    <tr><td>weight</td><td>number</td><td>400</td><td>100–700 variable axis</td></tr>
+    <tr><td>fill</td><td>bool</td><td>false</td><td>Solid vs. outline rendering (FILL axis 0/1)</td></tr>
+  </table>
+  <h3>Icons used in this kit</h3>
+  <div class="icon-grid">
+    <div class="icon-item"><span class="material-symbols-outlined">search</span><span class="nm">search</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">today</span><span class="nm">today</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">calendar_month</span><span class="nm">calendar_month</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">calendar_today</span><span class="nm">calendar_today</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">inventory_2</span><span class="nm">inventory_2</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">flag</span><span class="nm">flag</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">add</span><span class="nm">add</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">add_circle</span><span class="nm">add_circle</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">check_circle</span><span class="nm">check_circle</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">checklist</span><span class="nm">checklist</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">check</span><span class="nm">check</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">close</span><span class="nm">close</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">chevron_right</span><span class="nm">chevron_right</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">chevron_left</span><span class="nm">chevron_left</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">more_horiz</span><span class="nm">more_horiz</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">more_vert</span><span class="nm">more_vert</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">delete</span><span class="nm">delete</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">edit</span><span class="nm">edit</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">edit_note</span><span class="nm">edit_note</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">label</span><span class="nm">label</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">list_alt</span><span class="nm">list_alt</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">account_tree</span><span class="nm">account_tree</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">timeline</span><span class="nm">timeline</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">description</span><span class="nm">description</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">cloud_upload</span><span class="nm">cloud_upload</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">storage</span><span class="nm">storage</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">ios_share</span><span class="nm">ios_share</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">link</span><span class="nm">link</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">public</span><span class="nm">public</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">lock</span><span class="nm">lock</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">lock_reset</span><span class="nm">lock_reset</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">person</span><span class="nm">person</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">badge</span><span class="nm">badge</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">photo_camera</span><span class="nm">photo_camera</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">dns</span><span class="nm">dns</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">smartphone</span><span class="nm">smartphone</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">cloud</span><span class="nm">cloud</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">warning</span><span class="nm">warning</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">drag_indicator</span><span class="nm">drag_indicator</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">create_new_folder</span><span class="nm">create_new_folder</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">swap_horiz</span><span class="nm">swap_horiz</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">unfold_more</span><span class="nm">unfold_more</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">auto_awesome</span><span class="nm">auto_awesome</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">arrow_forward</span><span class="nm">arrow_forward</span></div>
+    <div class="icon-item"><span class="material-symbols-outlined">open_in_browser</span><span class="nm">open_in_browser</span></div>
+  </div>
+  <p>Emoji continue to be used for user-generated list/folder/timeline icons (e.g. 🚴 🎒 🏡) — never for system chrome, exactly as in the web kit's content rules.</p>
+</section>
+
+<section id="frame">
+  <h2>Device Frame</h2>
+  <p>Two independent device-frame implementations exist — pick the right one for the job.</p>
+  <div class="frame-diagram">
+    <div class="phone-mini">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="statustxt">9:41</div>
+      </div>
+      <div class="home"></div>
+    </div>
+    <div class="anno">
+      <h3 style="margin-top:0">PhoneFrame <span class="mono" style="font-weight:400;color:var(--color-outline)">(components.jsx)</span></h3>
+      <ul>
+        <li><strong>393 × 852px</strong> outer, 9px bezel, 56px corner radius — modeled on iPhone 15/16.</li>
+        <li>Custom-drawn status bar (time + signal/wifi/battery SVGs), 126×36 dynamic-island pill, 134×5 home indicator.</li>
+        <li>Used to wrap the live <code>&lt;AppShell/&gt;</code> for the interactive prototype — this is what you see in <code>index.html</code>.</li>
+        <li>Background reads <code>--sc-page</code> so Tweaks re-color it live.</li>
+      </ul>
+      <h3>IOSDevice <span class="mono" style="font-weight:400;color:var(--color-outline)">(ios-frame.jsx)</span></h3>
+      <ul>
+        <li><strong>402 × 874px</strong> default, 48px radius — a fuller "iOS 26 Liquid Glass" kit: real blur/glass nav pills, grouped inset lists (<code>IOSList</code>/<code>IOSListRow</code>, 26px radius, 52px rows), and a full QWERTY <code>IOSKeyboard</code>.</li>
+        <li>Standalone / dependency-free — reach for this when mocking a single static iOS screen outside the running prototype (e.g. App Store screenshots, spec panels).</li>
+        <li>Supports a <code>dark</code> prop for light/dark chrome variants.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="nav">
+  <h2>Navigation Chrome</h2>
+  <table>
+    <tr><th>Chrome piece</th><th>Behavior</th></tr>
+    <tr><td>NavHeader</td><td>Sticky header with a large collapsing title (iOS large-title pattern). Title fades/slides up and a glassmorphic compact bar (<code>blur(22px)</code>) takes over once scroll passes ~52px.</td></tr>
+    <tr><td>FloatingTabBar</td><td>Bottom "Liquid Glass" floating pill nav — Dashboard / Scheduled / Files / Lists, persists across the four primary screens, fades out (not unmounts) when a sheet is open.</td></tr>
+    <tr><td>AddFloatBtn</td><td>Top-left floating circular button, opens the Add-Choice sheet (new task / list / folder).</td></tr>
+    <tr><td>ProfileBtn</td><td>Top-right floating avatar button, opens Settings; only shown on primary screens (not inside a list/folder detail).</td></tr>
+    <tr><td>SideRail</td><td>Reserved slot for wider/tablet layouts; currently a no-op placeholder alongside the phone frame.</td></tr>
+  </table>
+  <p>Screen transitions are directional slides driven by a rank order (<code>SCREEN_RANK</code> in <code>AppShell</code>) — moving to a "later" screen slides in from the right, moving "back" slides in from the left, matching iOS navigation-stack conventions even though this is a flat tab structure under the hood.</p>
+</section>
+
+<section id="screens">
+  <h2>Screen Inventory</h2>
+  <table>
+    <tr><th>Screen</th><th>Key</th><th>Purpose</th></tr>
+    <tr><td>Welcome</td><td class="mono">welcome</td><td>Local-only vs. connect-to-server mode picker; entry point before auth.</td></tr>
+    <tr><td>Login</td><td class="mono">login</td><td>3-step wizard (server URL → username → password) for self-hosted server connection.</td></tr>
+    <tr><td>Dashboard</td><td class="mono">dashboard</td><td>Today-focused home: overdue banner, 4-stat grid, weekly progress bar, Due Today list, quick-add, all-open-tasks preview.</td></tr>
+    <tr><td>List detail</td><td class="mono">list</td><td>Single list — gradient hero card with progress ring stats, sectioned task groups, quick-add scoped to the list.</td></tr>
+    <tr><td>Scheduled / Calendar</td><td class="mono">scheduled</td><td>Unified month calendar merging tasks + meetings + milestones; drag-and-drop task-to-date scheduling; unscheduled tray.</td></tr>
+    <tr><td>Files</td><td class="mono">files</td><td>Storage usage bar, recent-files grid with public/private + copy-link actions, upload dropzone, full file list.</td></tr>
+    <tr><td>Folder dashboard</td><td class="mono">folder</td><td>Folder overview — stat trio (total/done/open) + the lists filed under that folder.</td></tr>
+    <tr><td>Lists index</td><td class="mono">lists</td><td>Workspace switcher entry, summary strip, Timelines entry point, collapsible folders, standalone lists.</td></tr>
+    <tr><td>Timelines index</td><td class="mono">timelines</td><td>Card list of all timelines (milestone-based project plans).</td></tr>
+    <tr><td>Timeline detail</td><td class="mono">timeline</td><td>Vertical milestone rail with status (done / in-progress / upcoming) and sharing controls.</td></tr>
+  </table>
+</section>
+
+<section id="sheets">
+  <h2>Sheets &amp; Modals</h2>
+  <p>Every modal is a bottom sheet (26px top-radius, spring-in from <code>translateY(100%)</code>, dimmed+blurred backdrop) rendered by <code>AppShell</code> from a single <code>app.modal</code> string key — never a separate router.</p>
+  <table>
+    <tr><th>Sheet</th><th>Key</th><th>Purpose</th></tr>
+    <tr><td>Task detail</td><td class="mono">task-detail</td><td>Read-only task summary with Edit / Delete actions.</td></tr>
+    <tr><td>Edit / Add task</td><td class="mono">edit-task / add-task</td><td>Full task editor — title, date picker, priority, badge, note, subitems, sublist linking.</td></tr>
+    <tr><td>Add-choice</td><td class="mono">add-choice</td><td>Router sheet: choose to create a task, list, or folder.</td></tr>
+    <tr><td>Add folder / Add list</td><td class="mono">add-folder / add-list</td><td>Creation wizards with emoji + color pickers.</td></tr>
+    <tr><td>Lists drawer</td><td class="mono">lists-drawer</td><td>Quick list-switcher drawer.</td></tr>
+    <tr><td>Settings</td><td class="mono">settings</td><td>Profile edit, appearance, password change, connection info.</td></tr>
+    <tr><td>AI Assistant</td><td class="mono">ai-chat</td><td>Chat-style assistant sheet for task triage/suggestions.</td></tr>
+    <tr><td>Trash</td><td class="mono">trash</td><td>Soft-deleted tasks with restore.</td></tr>
+    <tr><td>Task filter</td><td class="mono">task-filter</td><td>Filtered task list (by open/completed/today/week/overdue) opened from stat cards.</td></tr>
+    <tr><td>File preview / detail</td><td class="mono">file-preview / file-detail</td><td>File metadata, sharing link, password/expiry controls.</td></tr>
+    <tr><td>Add timeline / Milestone editor</td><td class="mono">add-timeline / milestone-editor</td><td>Timeline creation + per-milestone editing.</td></tr>
+    <tr><td>Meeting / Day-add chooser</td><td class="mono">meeting / day-add</td><td>Calendar event editor + the +-button chooser on a given day.</td></tr>
+    <tr><td>Workspace switcher / wizard</td><td class="mono">workspace-switcher / workspace-wizard</td><td>Multi-workspace switching and creation.</td></tr>
+    <tr><td>Item settings</td><td class="mono">item-settings</td><td>Shared appearance/access/folder/share-link settings for lists &amp; timelines.</td></tr>
+    <tr><td>Two-factor setup</td><td class="mono">two-fa</td><td>2FA enable wizard with QR mock.</td></tr>
+  </table>
+</section>
+
+<section id="components">
+  <h2>Component Library</h2>
+  <h3>Primitives (components.jsx)</h3>
+  <table>
+    <tr><th>Component</th><th>Props</th><th>Notes</th></tr>
+    <tr><td>SFSymbol</td><td>name, size, color, weight, fill</td><td>Material Symbols Rounded wrapper — see Iconography.</td></tr>
+    <tr><td>NavHeader</td><td>title, eyebrow, subtitle, leading, trailing, large, scrollY</td><td>Collapsing large-title header; pass live scroll position for the collapse animation.</td></tr>
+    <tr><td>TaskRow</td><td>task, divider, onClick, listBadge, index</td><td>Checkbox + title + deadline/priority/badge/subitem metadata; staggered entrance via <code>index</code>.</td></tr>
+    <tr><td>QuickAdd</td><td>onAdd, placeholder</td><td>Inline single-line task composer with focus ring.</td></tr>
+    <tr><td>StatCard</td><td>label, value, sub, icon, accent, index, onClick</td><td>Animated count-up stat tile used in the dashboard grid.</td></tr>
+    <tr><td>Card</td><td>children, style</td><td>Generic white/bordered container, 18px margin gutters.</td></tr>
+    <tr><td>SectionHeader</td><td>title, right, inSheet</td><td>ALL-CAPS section label with optional trailing chip/count.</td></tr>
+    <tr><td>EmptyRow</td><td>text</td><td>Centered empty-state row.</td></tr>
+    <tr><td>Badge</td><td>label</td><td>Work / Personal / Urgent / Tip colored pill.</td></tr>
+    <tr><td>FileBadge</td><td>mime, size</td><td>File-type glyph tile with colored type stamp.</td></tr>
+    <tr><td>StorageBar</td><td>used, total, isAdmin</td><td>Storage usage progress bar.</td></tr>
+    <tr><td>FloatingTabBar / AddFloatBtn / ProfileBtn / SideRail</td><td>—</td><td>Persistent chrome, see Navigation Chrome.</td></tr>
+  </table>
+  <h3>Device frame kit (ios-frame.jsx)</h3>
+  <ul class="comp-list">
+    <li><code>IOSDevice</code></li>
+    <li><code>IOSStatusBar</code></li>
+    <li><code>IOSNavBar</code></li>
+    <li><code>IOSGlassPill</code></li>
+    <li><code>IOSList</code></li>
+    <li><code>IOSListRow</code></li>
+    <li><code>IOSKeyboard</code></li>
+  </ul>
+</section>
+
+<section id="motion">
+  <h2>Animation &amp; Interaction</h2>
+  <p>All keyframes are declared once in <code>index.html</code> and reused across every screen/sheet. Names are grouped by role:</p>
+  <div class="anim-list">
+    <div class="row"><div class="k">sheetIn</div><div class="v">380ms cubic-bezier(0.22,1,0.36,1) — sheet open</div></div>
+    <div class="row"><div class="k">overlayIn</div><div class="v">240ms ease — backdrop fade</div></div>
+    <div class="row"><div class="k">popIn</div><div class="v">180ms spring — dropdown menus</div></div>
+    <div class="row"><div class="k">screenIn / fadeUp</div><div class="v">200ms ease — small element entrances</div></div>
+    <div class="row"><div class="k">springUp / springScale</div><div class="v">350–420ms spring — card/section entrance</div></div>
+    <div class="row"><div class="k">heroIn</div><div class="v">600ms spring — welcome screen hero</div></div>
+    <div class="row"><div class="k">fadeBlur</div><div class="v">240–340ms — step-card transitions</div></div>
+    <div class="row"><div class="k">slideFromRight / slideFromLeft</div><div class="v">260ms — directional screen transitions</div></div>
+    <div class="row"><div class="k">checkPop / uncheckPop</div><div class="v">150ms — checkbox toggle</div></div>
+    <div class="row"><div class="k">rowSlideIn</div><div class="v">280–300ms, staggered by index — list rows</div></div>
+    <div class="row"><div class="k">progressFill</div><div class="v">600–700ms spring — progress bars</div></div>
+    <div class="row"><div class="k">pulse</div><div class="v">2s infinite — sync/live indicators</div></div>
+    <div class="row"><div class="k">shake</div><div class="v">420ms — validation error</div></div>
+    <div class="row"><div class="k">scIn</div><div class="v">280ms spring, staggered — calendar cell entrance</div></div>
+  </div>
+  <h3>Press &amp; hover states</h3>
+  <table>
+    <tr><th>State</th><th>Rule</th></tr>
+    <tr><td>Button active</td><td><code>transform: scale(0.94); opacity: 0.85</code> — global, 120ms spring</td></tr>
+    <tr><td>Row hover</td><td>Background → <code>var(--sc-hover)</code>, 150ms ease</td></tr>
+    <tr><td>Card hover (Files grid)</td><td><code>translateY(-2px)</code> + soft primary-tinted shadow</td></tr>
+    <tr><td>Checkbox check</td><td>150ms scale-pop with a 4° rotation overshoot</td></tr>
+    <tr><td>Drag-over calendar cell</td><td>Scale to 1.08, dashed white border, primary fill</td></tr>
+  </table>
+</section>
+
+<section id="tweaks">
+  <h2>Tweaks System</h2>
+  <p>The kit ships with a live Tweaks panel (via <code>tweaks-panel.jsx</code>) exposing three global controls that re-theme the whole prototype through CSS custom properties — useful for design review across brand variants without touching code.</p>
+  <table>
+    <tr><th>Tweak</th><th>Options</th><th>Affects</th></tr>
+    <tr><td>Palette</td><td>Lavender (default), Blue, Green, Pink — each a 5-color set</td><td><code>--sc-primary</code>, <code>-soft</code>, <code>-bg</code>, <code>-bg-2</code>, and page background</td></tr>
+    <tr><td>Corner style</td><td>Sharp / Rounded (default) / Bubbly</td><td><code>--sc-r</code>, <code>-sm</code>, <code>-lg</code></td></tr>
+    <tr><td>Spacing / Density</td><td>Compact / Regular (default) / Airy</td><td><code>--sc-row-py</code>, <code>--sc-card-pad</code></td></tr>
+  </table>
+</section>
+
+<section id="handoff">
+  <h2>Dev Handoff Notes</h2>
+  <h3>For native (SwiftUI / RN) engineers</h3>
+  <p>Treat this prototype as the interaction and pixel spec, not shippable code:</p>
+  <ul class="anno" style="padding-left:18px;">
+    <li>All spacing/radius/color values above are exact — port them as design tokens in your native token layer rather than eyeballing from screenshots.</li>
+    <li>Spring curves used throughout are <code>cubic-bezier(0.34, 1.56, 0.64, 1)</code> (overshoot spring) and <code>cubic-bezier(0.32, 0.72, 0, 1)</code> (screen slide) — map to <code>UISpring</code>/SwiftUI <code>.spring()</code> equivalents.</li>
+    <li>The large-title collapse behavior in <code>NavHeader</code> matches <code>UINavigationBar</code>'s native large-title-to-inline transition — implement with the platform-native component where possible rather than recreating scroll-driven opacity by hand.</li>
+    <li>The bottom sheet system (sheetIn, 26px top radius, drag handle, backdrop blur) maps directly to <code>UISheetPresentationController</code> / SwiftUI <code>.sheet</code> with a custom detent.</li>
+  </ul>
+  <h3>For designers extending the kit</h3>
+  <ul class="anno" style="padding-left:18px;">
+    <li>New screens should register in <code>SCREENS</code> and <code>SCREEN_RANK</code> in <code>AppShell</code> (screens.jsx) to get transitions and chrome visibility for free.</li>
+    <li>New sheets register in the <code>SHEETS</code> map in the same file — no extra plumbing needed, the sheet chrome (backdrop, handle, radius) is automatic.</li>
+    <li>Reuse <code>Card</code> / <code>SectionHeader</code> / <code>TaskRow</code> / <code>EmptyRow</code> before building new list patterns — nearly every screen composes from these four.</li>
+  </ul>
+  <div class="callout warn">
+    <p><strong>Scope note:</strong> this is a front-end-only prototype with in-memory seed data (see <code>SEED_*</code> constants in <code>index.html</code>) and <code>localStorage</code> for profile persistence only. No network layer exists in this kit — API wiring follows the contract already defined for the web app in the top-level <code>README.md</code>.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="#5e4dbb"/>
+    <rect x="30" y="15" width="40" height="70" rx="8" fill="#fdf8ff"/>
+    <rect x="36" y="24" width="28" height="4" rx="2" fill="#9d8dff"/>
+    <rect x="36" y="34" width="20" height="4" rx="2" fill="#e9e4f2"/>
+    <rect x="36" y="42" width="24" height="4" rx="2" fill="#e9e4f2"/>
+  </svg>
+</template>
+</body>
+</html>
