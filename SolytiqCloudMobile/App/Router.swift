@@ -26,6 +26,9 @@ enum SheetRoute: Identifiable {
     case twoFASetup
     case aiChat
     case filePreview(AppFileItem)
+    case moveTask(AppTask)
+    case workspaceSettings(AppWorkspace)
+    case search
 
     var id: String {
         switch self {
@@ -46,6 +49,9 @@ enum SheetRoute: Identifiable {
         case .twoFASetup: return "twoFASetup"
         case .aiChat: return "aiChat"
         case .filePreview(let f): return "filePreview-\(f.id)"
+        case .moveTask(let t): return "moveTask-\(t.id)"
+        case .workspaceSettings(let w): return "workspaceSettings-\(w.id)"
+        case .search: return "search"
         }
     }
 }

@@ -34,21 +34,50 @@ struct AppTask: Identifiable, Codable, Hashable {
     var position: Int
     var subItems: [AppSubItem]
     var linkedListId: String?
+    /// `"sublist"` (a child list owned by this task) vs `"link"` (a reference to
+    /// an existing standalone list). Nil when `linkedListId` is nil. — §1.3
+    var linkedListType: String?
     var createdAt: Date
     var updatedAt: Date
+    /// Set server-side when `checked` flips true; cleared when it flips back.
+    /// Read-only on the client, used for the completion strip and Gantt bars. — §1.4
+    var completedAt: Date?
 
     var listName: String?      // populated for cross-list views (Dashboard/Calendar)
 
     init(id: String = UUID().uuidString, title: String, note: String? = nil, checked: Bool = false,
          deadline: String? = nil, time: String? = nil, priority: Priority? = nil, badge: String? = nil,
          listId: String? = nil, sectionId: String? = nil, workspaceId: String? = nil, position: Int = 0,
-         subItems: [AppSubItem] = [], linkedListId: String? = nil, createdAt: Date = .now, updatedAt: Date = .now,
+         subItems: [AppSubItem] = [], linkedListId: String? = nil, linkedListType: String? = nil,
+         createdAt: Date = .now, updatedAt: Date = .now, completedAt: Date? = nil,
          listName: String? = nil) {
         self.id = id; self.title = title; self.note = note; self.checked = checked
         self.deadline = deadline; self.time = time; self.priority = priority; self.badge = badge
         self.listId = listId; self.sectionId = sectionId; self.workspaceId = workspaceId; self.position = position
-        self.subItems = subItems; self.linkedListId = linkedListId
-        self.createdAt = createdAt; self.updatedAt = updatedAt; self.listName = listName
+        self.subItems = subItems; self.linkedListId = linkedListId; self.linkedListType = linkedListType
+        self.createdAt = createdAt; self.updatedAt = updatedAt; self.completedAt = completedAt
+        self.listName = listName
+    }
+}
+
+/// The three ways a list can render its sections/tasks (persisted server-side
+/// as `lists.view_mode`). — §1.1
+enum ListViewMode: String, Codable, CaseIterable, Hashable, Identifiable {
+    case list, kanban, timeline
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .list: return "List"
+        case .kanban: return "Kanban"
+        case .timeline: return "Timeline"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .list: return "list.bullet"
+        case .kanban: return "rectangle.split.3x1"
+        case .timeline: return "chart.bar.xaxis"
+        }
     }
 }
 
@@ -74,6 +103,12 @@ struct AppList: Identifiable, Codable, Hashable {
     var shareToken: String?
     var position: Int
     var sections: [AppSection]
+    /// `"list" | "kanban" | "timeline"` — persisted view mode. — §1.1
+    var viewMode: String = ListViewMode.list.rawValue
+    /// Archived lists are hidden from the normal index; restore via unarchive. — §1.6
+    var isArchived: Bool = false
+
+    var mode: ListViewMode { ListViewMode(rawValue: viewMode) ?? .list }
 
     var totalTasks: Int { sections.reduce(0) { $0 + $1.tasks.count } }
     var doneTasks: Int { sections.reduce(0) { $0 + $1.tasks.filter(\.checked).count } }
@@ -86,6 +121,10 @@ struct AppFolder: Identifiable, Codable, Hashable {
     var emoji: String?
     var colorHex: String
     var position: Int
+    /// §3 — folder visibility / collapse state / owning workspace.
+    var isPublic: Bool = false
+    var collapsed: Bool = false
+    var workspaceId: String? = nil
 }
 
 struct AppMeeting: Identifiable, Codable, Hashable {
@@ -205,6 +244,63 @@ struct AppChatMessage: Identifiable, Codable, Hashable {
     var id: String = UUID().uuidString
     var role: String   // "user" | "assistant"
     var content: String
+}
+
+/// §17 — one of this account's mobile app logins (`mobile_connections`).
+struct AppMobileConnection: Identifiable, Codable, Hashable {
+    var id: String
+    var deviceName: String?
+    var deviceModel: String?
+    var osVersion: String?
+    var appVersion: String?
+    var lastSeenAt: Date?
+    var createdAt: Date?
+    /// True when this row is the device the app is currently running on.
+    var isCurrent: Bool = false
+}
+
+/// §14 — an external agent / personal-access token connected to the account
+/// (the token half of web's "Claude MCP" settings section).
+struct AppConnectedToken: Identifiable, Codable, Hashable {
+    var id: String
+    var name: String
+    var clientName: String?
+    var createdAt: Date?
+    var lastUsedAt: Date?
+}
+
+/// §11 — an installable instance-wide app from the App Directory, with its
+/// current installed state (used to gate GPS/Automations/MCP surfaces).
+struct AppInstalledApp: Identifiable, Codable, Hashable {
+    var id: String
+    var name: String
+    var description: String?
+    var installed: Bool
+}
+
+/// §15 — one cross-entity global-search hit.
+struct AppSearchResult: Identifiable, Codable, Hashable {
+    enum Kind: String, Codable, Hashable {
+        case task, list, timeline, milestone, meeting, workspace, file, folder
+        var symbol: String {
+            switch self {
+            case .task: return "checkmark.circle"
+            case .list: return "list.bullet"
+            case .timeline: return "chart.bar.xaxis"
+            case .milestone: return "flag"
+            case .meeting: return "calendar"
+            case .workspace: return "square.stack.3d.up"
+            case .file: return "doc"
+            case .folder: return "folder"
+            }
+        }
+    }
+    var id: String
+    var kind: Kind
+    var title: String
+    var subtitle: String?
+    /// For a task/milestone hit, the id of the parent list/timeline to open.
+    var parentId: String?
 }
 
 // MARK: - Small date helpers shared by every screen

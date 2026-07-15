@@ -9,6 +9,8 @@ struct ListDetailView: View {
 
     var listId: String
     @State private var list: AppList?
+    @State private var mode: ListViewMode = .list
+    @State private var didInitMode = false
     @State private var showAddSection = false
     @State private var newSectionName = ""
     @State private var confirmDelete = false
@@ -18,22 +20,40 @@ struct ListDetailView: View {
     @State private var templateSavedBanner = false
 
     var body: some View {
-        ScrollView {
+        Group {
             if let list {
-                VStack(spacing: 16) {
-                    hero(list)
-                    ForEach(list.sections) { section in
-                        sectionBlock(section)
+                if mode == .kanban {
+                    VStack(spacing: 12) {
+                        hero(list).padding(.top, 8)
+                        modePicker(list)
+                        KanbanListView(list: list,
+                                       onToggle: { task in Task { await toggle(task) } },
+                                       onTapTask: { task in router.sheet = .editTask(task) },
+                                       onAddTask: { sectionId in router.sheet = .addTask(listId: listId, sectionId: sectionId, presetDeadline: nil) })
                     }
-                    Button {
-                        showAddSection = true
-                    } label: {
-                        Label("Add Section", systemImage: "plus").font(.system(size: 13, weight: .semibold))
+                } else {
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            hero(list)
+                            modePicker(list)
+                            if mode == .timeline {
+                                timelinePlaceholder
+                            } else {
+                                ForEach(list.sections) { section in
+                                    sectionBlock(section)
+                                }
+                                Button {
+                                    showAddSection = true
+                                } label: {
+                                    Label("Add Section", systemImage: "plus").font(.system(size: 13, weight: .semibold))
+                                }
+                                .padding(.top, 4)
+                            }
+                        }
+                        .padding(.bottom, 100)
+                        .padding(.top, 8)
                     }
-                    .padding(.top, 4)
                 }
-                .padding(.bottom, 100)
-                .padding(.top, 8)
             } else {
                 ProgressView().padding(.top, 60)
             }
@@ -199,6 +219,34 @@ struct ListDetailView: View {
 
     private func reload() async {
         list = await store.lists().first { $0.id == listId }
+        if !didInitMode, let list { mode = list.mode; didInitMode = true }
+    }
+
+    /// Segmented List / Kanban / Timeline switcher; persists the choice.
+    private func modePicker(_ list: AppList) -> some View {
+        Picker("View", selection: Binding(get: { mode }, set: { newMode in
+            mode = newMode
+            Task { await store.setListViewMode(listId: listId, mode: newMode) }
+        })) {
+            ForEach(ListViewMode.allCases) { m in
+                Label(m.label, systemImage: m.symbol).tag(m)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 22)
+    }
+
+    /// The Gantt/Timeline view is the section's highest-effort sub-item and is
+    /// tracked as a follow-up; for now this explains where it will live.
+    private var timelinePlaceholder: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "chart.bar.xaxis").font(.system(size: 34)).foregroundStyle(SCColor.text4)
+            Text("Timeline view").font(.system(size: 15, weight: .semibold)).foregroundStyle(SCColor.text2)
+            Text("A Gantt-style timeline of this list's tasks is coming soon. Switch to List or Kanban to work with tasks.")
+                .font(.system(size: 12.5)).foregroundStyle(SCColor.text4)
+                .multilineTextAlignment(.center).padding(.horizontal, 40)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 40)
     }
 }
 

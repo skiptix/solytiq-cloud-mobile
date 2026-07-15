@@ -32,6 +32,13 @@ struct WorkspaceSwitcherSheet: View {
                         if ws.role == "owner" {
                             Button("Delete", role: .destructive) { pendingDelete = ws }
                         }
+                        if ws.role == "owner" || ws.role == "admin" {
+                            Button("Settings") {
+                                dismiss()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { router.sheet = .workspaceSettings(ws) }
+                            }
+                            .tint(SCColor.primary)
+                        }
                     }
                 }
                 Button {

@@ -122,6 +122,9 @@ struct DashboardView: View {
                 }
                 if appState.mode == .server {
                     ToolbarItem(placement: .principal) { workspaceChip }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { router.sheet = .search } label: { Image(systemName: "magnifyingglass") }
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) { ProfileToolbarButton() }
             }

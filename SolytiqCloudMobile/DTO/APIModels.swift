@@ -53,14 +53,16 @@ struct APITaskDTO: Codable {
     var updatedAt: String?
     var linkedListId: String?
     var linkedListType: String?
+    var completedAt: String?
 
     func toApp(listName: String? = nil) -> AppTask {
         AppTask(id: id.stringValue, title: title, note: note, checked: checked,
                  deadline: deadline, time: time, priority: priority.flatMap(Priority.init(rawValue:)),
                  badge: badge, listId: listId?.stringValue, sectionId: sectionId?.stringValue,
                  workspaceId: workspaceId, position: position, subItems: [],
-                 linkedListId: linkedListId,
+                 linkedListId: linkedListId, linkedListType: linkedListType,
                  createdAt: ServerDate.parse(createdAt) ?? .now, updatedAt: ServerDate.parse(updatedAt) ?? .now,
+                 completedAt: ServerDate.parse(completedAt),
                  listName: listName)
     }
 }
@@ -91,6 +93,8 @@ struct APIListDTO: Codable {
     var position: Int
     var shareEnabled: Bool?
     var shareToken: String?
+    var viewMode: String?
+    var isArchived: Bool?
 
     var sections: [APISectionDTO]?
 
@@ -98,7 +102,8 @@ struct APIListDTO: Codable {
         AppList(id: id.stringValue, name: name, emoji: emoji, colorHex: color ?? "#5e4dbb",
                  subtitle: subtitle, folderId: folderId?.stringValue, workspaceId: workspaceId,
                  isPublic: isPublic, shareEnabled: shareEnabled ?? false, shareToken: shareToken,
-                 position: position, sections: (sections ?? []).map { $0.toApp(listName: name) })
+                 position: position, sections: (sections ?? []).map { $0.toApp(listName: name) },
+                 viewMode: viewMode ?? ListViewMode.list.rawValue, isArchived: isArchived ?? false)
     }
 }
 
@@ -109,9 +114,12 @@ struct APIFolderDTO: Codable {
     var color: String?
     var position: Int
     var isPublic: Bool?
+    var collapsed: Bool?
+    var workspaceId: String?
 
     func toApp() -> AppFolder {
-        AppFolder(id: id.stringValue, name: name, emoji: emoji, colorHex: color ?? "#10B981", position: position)
+        AppFolder(id: id.stringValue, name: name, emoji: emoji, colorHex: color ?? "#10B981", position: position,
+                   isPublic: isPublic ?? false, collapsed: collapsed ?? false, workspaceId: workspaceId)
     }
 }
 

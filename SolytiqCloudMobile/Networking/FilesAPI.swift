@@ -43,6 +43,13 @@ struct FilesAPI {
         _ = try await client.request("/files/\(id)", method: "DELETE", as: APIClient.EmptyResponse.self)
     }
 
+    /// §5.1 — authoritative per-user quota from the server (`app_settings`),
+    /// replacing the client-side sum of listed file sizes.
+    struct Storage: Decodable { var used: Int; var quota: Int }
+    func storage() async throws -> Storage {
+        try await client.request("/files/storage", as: Storage.self)
+    }
+
     /// Uploads via `multipart/form-data`, bypassing the shared JSON
     /// `APIClient` since this one request needs a different content type and
     /// a raw byte body. Storage quota / max-size errors surface the same way

@@ -139,7 +139,7 @@ final class AppState: ObservableObject {
         defaults.set(AppMode.local.rawValue, forKey: modeKey)
     }
 
-    func didConnectToServer(url: URL, token: String, user: AppUser) async {
+    func didConnectToServer(url: URL, token: String, user: AppUser, connectionId: String? = nil) async {
         serverURL = url
         currentUser = user
         mode = .server
@@ -147,6 +147,7 @@ final class AppState: ObservableObject {
         defaults.set(AppMode.server.rawValue, forKey: modeKey)
         KeychainStore.set(url.absoluteString, for: KeychainStore.Key.serverURL)
         KeychainStore.set(token, for: KeychainStore.Key.authToken)
+        if let connectionId { KeychainStore.set(connectionId, for: KeychainStore.Key.connectionId) }
         await APIClient.shared.configure(baseURL: url, token: token)
         featureFlags = try? await AuthAPI().featureFlags()
         workspaces = (try? await WorkspacesAPI().list()) ?? []
@@ -158,6 +159,7 @@ final class AppState: ObservableObject {
         sync.stop()
         KeychainStore.remove(KeychainStore.Key.authToken)
         KeychainStore.remove(KeychainStore.Key.serverURL)
+        KeychainStore.remove(KeychainStore.Key.connectionId)
         await APIClient.shared.configure(baseURL: nil, token: nil)
         currentUser = nil
         serverURL = nil

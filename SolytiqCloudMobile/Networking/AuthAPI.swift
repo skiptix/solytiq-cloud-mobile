@@ -110,4 +110,32 @@ struct AuthAPI {
     func featureFlags() async throws -> FeatureFlags {
         try await client.request("/auth/feature-flags")
     }
+
+    // MARK: §17 — this account's mobile app sessions (`mobile_connections`).
+
+    struct MobileConnectionDTO: Decodable {
+        var id: IntOrString
+        var deviceName: String?
+        var deviceModel: String?
+        var osVersion: String?
+        var appVersion: String?
+        var lastSeenAt: String?
+        var createdAt: String?
+        func toApp(currentId: String?) -> AppMobileConnection {
+            let idStr = id.stringValue
+            return AppMobileConnection(id: idStr, deviceName: deviceName, deviceModel: deviceModel,
+                                        osVersion: osVersion, appVersion: appVersion,
+                                        lastSeenAt: ServerDate.parse(lastSeenAt), createdAt: ServerDate.parse(createdAt),
+                                        isCurrent: currentId != nil && idStr == currentId)
+        }
+    }
+
+    func mobileConnections(currentId: String?) async throws -> [AppMobileConnection] {
+        struct R: Decodable { var connections: [MobileConnectionDTO] }
+        return try await client.request("/auth/mobile-connections", as: R.self).connections.map { $0.toApp(currentId: currentId) }
+    }
+
+    func revokeMobileConnection(id: String) async throws {
+        _ = try await client.request("/auth/mobile-connections/\(id)", method: "DELETE", as: APIClient.EmptyResponse.self)
+    }
 }

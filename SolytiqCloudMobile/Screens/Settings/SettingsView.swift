@@ -18,6 +18,16 @@ struct SettingsView: View {
     @State private var showChangePassword = false
     @State private var confirmSignOut = false
 
+    // §14 connected agents/tokens · §17 device sessions · §12 CalDAV
+    @State private var tokens: [AppConnectedToken] = []
+    @State private var connections: [AppMobileConnection] = []
+    @State private var pendingTokenRevoke: AppConnectedToken?
+    @State private var pendingConnectionRevoke: AppMobileConnection?
+    @State private var caldavStatus: CalDAVAPI.Status?
+    @State private var caldavPassword: String?
+    @State private var caldavURL: String?
+    @State private var caldavUsername: String?
+
     var body: some View {
         NavigationStack {
             Form {
@@ -25,6 +35,9 @@ struct SettingsView: View {
                 appearanceSection
                 if appState.mode == .server {
                     securitySection
+                    devicesSection
+                    connectedAppsSection
+                    calDAVSection
                     usersSection
                     Section {
                         Text("More settings are available in the web interface of your self-hosted instance — storage quotas, server config, SMTP and danger zone.")
@@ -52,8 +65,145 @@ struct SettingsView: View {
             .confirmDelete(isPresented: $showSwitchWarning, title: "Local data will not sync", message: "Switching modes does not migrate data between \"On This Phone\" and a server. Your current data stays where it is.", confirmLabel: "Continue") {
                 Task { await appState.switchToLocalMode(); dismiss() }
             }
-            .task { if appState.mode == .server { members = (try? await AuthAPI().members()) ?? [] } }
+            .confirmDelete(isPresented: Binding(get: { pendingTokenRevoke != nil }, set: { if !$0 { pendingTokenRevoke = nil } }),
+                           title: "Disconnect App?",
+                           message: "\(pendingTokenRevoke?.name ?? "This app") will lose access to your account.",
+                           confirmLabel: "Disconnect") {
+                guard let token = pendingTokenRevoke else { return }
+                Task { await store.revokeToken(id: token.id); tokens.removeAll { $0.id == token.id } }
+            }
+            .confirmDelete(isPresented: Binding(get: { pendingConnectionRevoke != nil }, set: { if !$0 { pendingConnectionRevoke = nil } }),
+                           title: "Sign Out Device?",
+                           message: "\(pendingConnectionRevoke?.deviceName ?? "That device") will be signed out of this account.",
+                           confirmLabel: "Sign Out") {
+                guard let conn = pendingConnectionRevoke else { return }
+                Task { await store.revokeMobileConnection(id: conn.id); connections.removeAll { $0.id == conn.id } }
+            }
+            .task {
+                guard appState.mode == .server else { return }
+                members = (try? await AuthAPI().members()) ?? []
+                connections = await store.mobileConnections()
+                tokens = await store.connectedTokens()
+                caldavStatus = try? await CalDAVAPI().status()
+                caldavURL = caldavStatus?.url
+                caldavUsername = caldavStatus?.username
+            }
         }
+    }
+
+    // MARK: §17 — device sessions
+
+    private var devicesSection: some View {
+        Section("Devices") {
+            if connections.isEmpty {
+                Text("No other active sessions.").font(.system(size: 12.5)).foregroundStyle(SCColor.text4)
+            }
+            ForEach(connections) { conn in
+                HStack {
+                    Image(systemName: conn.isCurrent ? "iphone.gen3.circle.fill" : "iphone.gen3")
+                        .foregroundStyle(conn.isCurrent ? SCColor.primary : SCColor.text4)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(conn.deviceName ?? conn.deviceModel ?? "Unknown device").font(.system(size: 14))
+                        Text(deviceSubtitle(conn)).font(.system(size: 11)).foregroundStyle(SCColor.text4)
+                    }
+                    Spacer()
+                    if conn.isCurrent {
+                        Text("This device").font(.system(size: 10, weight: .bold)).foregroundStyle(SCColor.primary)
+                    }
+                }
+                .swipeActions(edge: .trailing) {
+                    if !conn.isCurrent {
+                        Button("Sign Out", role: .destructive) { pendingConnectionRevoke = conn }
+                    }
+                }
+            }
+        }
+    }
+
+    private func deviceSubtitle(_ conn: AppMobileConnection) -> String {
+        var parts: [String] = []
+        if let os = conn.osVersion { parts.append(os) }
+        if let v = conn.appVersion { parts.append("v\(v)") }
+        if let seen = conn.lastSeenAt {
+            let f = RelativeDateTimeFormatter(); f.unitsStyle = .short
+            parts.append(f.localizedString(for: seen, relativeTo: .now))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    // MARK: §14 — connected external apps (MCP tokens)
+
+    private var connectedAppsSection: some View {
+        Section {
+            if tokens.isEmpty {
+                Text("No external apps connected. Connect Claude (or another MCP client) from the web to see it here.")
+                    .font(.system(size: 11.5)).foregroundStyle(SCColor.text4)
+            }
+            ForEach(tokens) { token in
+                HStack {
+                    Image(systemName: "app.connected.to.app.below.fill").foregroundStyle(SCColor.primary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(token.name).font(.system(size: 14))
+                        if let created = token.createdAt {
+                            Text("Connected \(created.formatted(date: .abbreviated, time: .omitted))")
+                                .font(.system(size: 11)).foregroundStyle(SCColor.text4)
+                        }
+                    }
+                    Spacer()
+                }
+                .swipeActions(edge: .trailing) {
+                    Button("Revoke", role: .destructive) { pendingTokenRevoke = token }
+                }
+            }
+        } header: {
+            Text("Connected Apps")
+        }
+    }
+
+    // MARK: §12 — CalDAV credential management
+
+    private var calDAVSection: some View {
+        Section {
+            if let password = caldavPassword {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("App password (shown once — copy it now):")
+                        .font(.system(size: 11.5)).foregroundStyle(SCColor.text3)
+                    HStack {
+                        Text(password).font(.system(size: 13, design: .monospaced)).textSelection(.enabled)
+                        Spacer()
+                        Button { UIPasteboard.general.string = password } label: { Image(systemName: "doc.on.doc") }
+                    }
+                }
+            }
+            if let url = caldavURL, !url.isEmpty {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("CalDAV URL").font(.system(size: 12, weight: .medium))
+                        Text(url).font(.system(size: 11, design: .monospaced)).foregroundStyle(SCColor.text4).lineLimit(1)
+                    }
+                    Spacer()
+                    Button { UIPasteboard.general.string = url } label: { Image(systemName: "doc.on.doc") }
+                }
+            }
+            Button("Generate App Password") { Task { await generateCalDAVPassword() } }
+            if caldavStatus?.configured == true {
+                Button("Revoke CalDAV Access", role: .destructive) {
+                    Task { try? await CalDAVAPI().revoke(); caldavStatus = try? await CalDAVAPI().status(); caldavPassword = nil }
+                }
+            }
+            Text("Add this as a CalDAV account in iOS Settings → Calendar → Accounts to sync your Solytiq calendar into the native Calendar app.")
+                .font(.system(size: 11)).foregroundStyle(SCColor.text4)
+        } header: {
+            Text("Calendar Sync (CalDAV)")
+        }
+    }
+
+    private func generateCalDAVPassword() async {
+        guard let generated = try? await CalDAVAPI().generatePassword() else { return }
+        caldavPassword = generated.password
+        if let url = generated.url { caldavURL = url }
+        if let user = generated.username { caldavUsername = user }
+        caldavStatus = try? await CalDAVAPI().status()
     }
 
     private var profileSection: some View {

@@ -72,6 +72,12 @@ struct MainTabView: View {
             AIAssistantSheet()
         case .filePreview(let file):
             FilePreviewSheet(file: file)
+        case .moveTask(let task):
+            MoveTaskSheet(task: task)
+        case .workspaceSettings(let workspace):
+            WorkspaceSettingsSheet(workspace: workspace)
+        case .search:
+            SearchSheet()
         }
     }
 }

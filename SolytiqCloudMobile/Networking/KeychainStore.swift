@@ -48,5 +48,8 @@ enum KeychainStore {
         static let serverURL = "server_url"
         static let username = "username"
         static let pendingTwoFAToken = "pending_2fa_token"
+        /// Id of this device's `mobile_connections` row, so Settings → Devices
+        /// can mark the current session. Set at login, cleared on sign-out.
+        static let connectionId = "connection_id"
     }
 }
