@@ -40,6 +40,21 @@ struct TasksAPI {
     func delete(id: String) async throws {
         _ = try await client.request("/tasks/\(id)", method: "DELETE", as: APIClient.EmptyResponse.self)
     }
+
+    /// §1.7 — move a task to another list/section. `PUT /api/tasks/:id/move`.
+    struct MoveBody: Encodable { var listId: String?; var sectionId: String? }
+    @discardableResult
+    func move(id: String, toListId: String?, toSectionId: String?) async throws -> AppTask {
+        struct R: Decodable { var task: APITaskDTO }
+        return try await client.request("/tasks/\(id)/move", method: "PUT",
+                                         body: MoveBody(listId: toListId, sectionId: toSectionId), as: R.self).task.toApp()
+    }
+
+    /// §1.2 — persist a new ordering of dashboard tasks. `PUT /api/tasks/reorder`.
+    struct ReorderBody: Encodable { var orderedIds: [String] }
+    func reorder(orderedIds: [String]) async throws {
+        _ = try await client.request("/tasks/reorder", method: "PUT", body: ReorderBody(orderedIds: orderedIds), as: APIClient.EmptyResponse.self)
+    }
 }
 
 struct ListsAPI {
@@ -63,7 +78,10 @@ struct ListsAPI {
         return try await client.request("/lists", method: "POST", body: body, as: R.self).list.toApp()
     }
 
-    struct UpdateBody: Encodable { var name: String?; var emoji: String?; var color: String?; var subtitle: String?; var isPublic: Bool?; var folderId: String? }
+    struct UpdateBody: Encodable {
+        var name: String?; var emoji: String?; var color: String?; var subtitle: String?
+        var isPublic: Bool?; var folderId: String?; var viewMode: String? = nil
+    }
     func update(id: String, _ patch: UpdateBody) async throws -> AppList {
         struct R: Decodable { var list: APIListDTO }
         return try await client.request("/lists/\(id)", method: "PUT", body: patch, as: R.self).list.toApp()
@@ -71,6 +89,33 @@ struct ListsAPI {
 
     func delete(id: String) async throws {
         _ = try await client.request("/lists/\(id)", method: "DELETE", as: APIClient.EmptyResponse.self)
+    }
+
+    /// §1.6 — lists archived on the web; fetch/restore them here.
+    func archived() async throws -> [AppList] {
+        struct R: Decodable { var lists: [APIListDTO] }
+        return try await client.request("/lists", query: ["archived": "true"], as: R.self).lists.map { $0.toApp() }
+    }
+    func unarchive(id: String) async throws {
+        _ = try await client.request("/lists/\(id)/unarchive", method: "PUT", as: APIClient.EmptyResponse.self)
+    }
+
+    /// §1.2 — reorder sections within a list, or tasks within a section.
+    struct ReorderBody: Encodable { var orderedIds: [String] }
+    func reorderSections(listId: String, orderedIds: [String]) async throws {
+        _ = try await client.request("/lists/\(listId)/sections/reorder", method: "PUT", body: ReorderBody(orderedIds: orderedIds), as: APIClient.EmptyResponse.self)
+    }
+    func reorderTasks(listId: String, sectionId: String, orderedIds: [String]) async throws {
+        _ = try await client.request("/lists/\(listId)/sections/\(sectionId)/tasks/reorder", method: "PUT", body: ReorderBody(orderedIds: orderedIds), as: APIClient.EmptyResponse.self)
+    }
+
+    /// §1.3 — link an existing standalone list into a section as a `'link'`
+    /// reference (distinct from `createSublist`'s owned child).
+    struct LinkBody: Encodable { var targetListId: String }
+    func linkList(listId: String, sectionId: String, parentTaskId: String, targetListId: String) async throws -> AppTask {
+        struct R: Decodable { var task: APITaskDTO }
+        return try await client.request("/lists/\(listId)/sections/\(sectionId)/tasks/link", method: "POST",
+                                         query: ["taskId": parentTaskId], body: LinkBody(targetListId: targetListId), as: R.self).task.toApp()
     }
 
     struct ShareBody: Encodable { var shareEnabled: Bool; var password: String?; var expiresAt: String? }
@@ -138,7 +183,10 @@ struct FoldersAPI {
                                          body: CreateBody(name: name, emoji: emoji, color: color, isPublic: false, workspaceId: workspaceId), as: R.self).folder.toApp()
     }
 
-    struct UpdateBody: Encodable { var name: String?; var emoji: String?; var color: String?; var position: Int? }
+    struct UpdateBody: Encodable {
+        var name: String?; var emoji: String?; var color: String?; var position: Int?
+        var isPublic: Bool?; var collapsed: Bool?
+    }
     func update(id: String, _ patch: UpdateBody) async throws -> AppFolder {
         struct R: Decodable { var folder: APIFolderDTO }
         return try await client.request("/folders/\(id)", method: "PUT", body: patch, as: R.self).folder.toApp()
@@ -146,6 +194,12 @@ struct FoldersAPI {
 
     func delete(id: String) async throws {
         _ = try await client.request("/folders/\(id)", method: "DELETE", as: APIClient.EmptyResponse.self)
+    }
+
+    /// §3 — move a folder (and its lists) into another workspace.
+    struct WorkspaceBody: Encodable { var workspaceId: String? }
+    func moveToWorkspace(id: String, workspaceId: String?) async throws {
+        _ = try await client.request("/folders/\(id)/workspace", method: "PUT", body: WorkspaceBody(workspaceId: workspaceId), as: APIClient.EmptyResponse.self)
     }
 }
 
@@ -167,6 +221,20 @@ struct WorkspacesAPI {
     func addMember(workspaceId: String, username: String) async throws {
         struct Body: Encodable { var username: String }
         _ = try await client.request("/workspaces/\(workspaceId)/members", method: "POST", body: Body(username: username), as: APIClient.EmptyResponse.self)
+    }
+
+    /// §4.2 — remove a member. `DELETE /api/workspaces/:id/members/:userId`.
+    func removeMember(workspaceId: String, userId: String) async throws {
+        _ = try await client.request("/workspaces/\(workspaceId)/members/\(userId)", method: "DELETE", as: APIClient.EmptyResponse.self)
+    }
+
+    /// §4.1 — update workspace metadata. `PUT /api/workspaces/:id`.
+    struct UpdateBody: Encodable { var name: String?; var description: String?; var emoji: String?; var visibility: String? }
+    @discardableResult
+    func update(id: String, name: String?, description: String?, emoji: String?, visibility: String?) async throws -> AppWorkspace {
+        struct R: Decodable { var workspace: APIWorkspaceDTO }
+        return try await client.request("/workspaces/\(id)", method: "PUT",
+                                         body: UpdateBody(name: name, description: description, emoji: emoji, visibility: visibility), as: R.self).workspace.toApp()
     }
 
     func delete(id: String) async throws {
@@ -205,5 +273,11 @@ struct MeetingsAPI {
 
     func delete(id: String) async throws {
         _ = try await client.request("/meetings/\(id)", method: "DELETE", as: APIClient.EmptyResponse.self)
+    }
+
+    /// §2.2 — leave a meeting you were invited to (removes yourself as an
+    /// attendee). `POST /api/meetings/:id/leave`.
+    func leave(id: String) async throws {
+        _ = try await client.request("/meetings/\(id)/leave", method: "POST", as: APIClient.EmptyResponse.self)
     }
 }

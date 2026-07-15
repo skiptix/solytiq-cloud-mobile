@@ -25,6 +25,7 @@ struct EditTaskSheet: View {
     @State private var confirmDelete = false
     @State private var sublistName = ""
     @State private var showSublistPrompt = false
+    @State private var showLinkPicker = false
     @FocusState private var titleFocused: Bool
 
     private static let badges = ["Work", "Personal", "Urgent", "Tip"]
@@ -93,10 +94,28 @@ struct EditTaskSheet: View {
                     }
                 }
 
+                if let existingTask, existingTask.checked, let completedAt = existingTask.completedAt {
+                    Section {
+                        completionStrip(created: existingTask.createdAt, completed: completedAt)
+                    }
+                }
+
+                if let existingTask, existingTask.listId != nil {
+                    Section {
+                        Button {
+                            dismiss()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { router.sheet = .moveTask(existingTask) }
+                        } label: { Label("Move to another list…", systemImage: "arrow.right.doc.on.clipboard") }
+                    }
+                }
+
                 if let existingTask, existingTask.linkedListId == nil, existingTask.listId != nil {
                     Section {
                         Button { showSublistPrompt = true } label: {
                             Label("Turn into Sublist", systemImage: "arrow.triangle.branch")
+                        }
+                        Button { showLinkPicker = true } label: {
+                            Label("Link an Existing List", systemImage: "link")
                         }
                     }
                 } else if let existingTask, let linkedId = existingTask.linkedListId {
@@ -137,8 +156,40 @@ struct EditTaskSheet: View {
             } message: {
                 Text("This creates a new list linked to this task.")
             }
+            .sheet(isPresented: $showLinkPicker) {
+                if let existingTask {
+                    LinkListPickerSheet(parentTask: existingTask) { dismiss() }
+                }
+            }
         }
         .onAppear(perform: populate)
+    }
+
+    /// §1.4 — compact "Created → Done" strip with a duration badge, shown once
+    /// a task is checked (mirrors web's `TaskMiniTimeline`).
+    private func completionStrip(created: Date, completed: Date) -> some View {
+        let df = DateFormatter(); df.dateFormat = "MMM d, h:mm a"
+        let interval = max(0, completed.timeIntervalSince(created))
+        let days = Int(interval / 86_400)
+        let hours = Int((interval.truncatingRemainder(dividingBy: 86_400)) / 3_600)
+        let durationText: String = days > 0 ? "\(days)d \(hours)h" : (hours > 0 ? "\(hours)h" : "<1h")
+        return HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Created").font(.system(size: 10, weight: .bold)).tracking(0.6).foregroundStyle(SCColor.text4)
+                Text(df.string(from: created)).font(.system(size: 12)).foregroundStyle(SCColor.text3)
+            }
+            Image(systemName: "arrow.right").font(.system(size: 11)).foregroundStyle(SCColor.text4)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Done").font(.system(size: 10, weight: .bold)).tracking(0.6).foregroundStyle(SCColor.success)
+                Text(df.string(from: completed)).font(.system(size: 12)).foregroundStyle(SCColor.text3)
+            }
+            Spacer()
+            Text(durationText)
+                .font(.system(size: 11, weight: .bold)).monospacedDigit()
+                .foregroundStyle(SCColor.success)
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(Capsule().fill(SCColor.success.opacity(0.12)))
+        }
     }
 
     private func populate() {
@@ -207,5 +258,52 @@ struct EditTaskSheet: View {
         guard !name.isEmpty else { return }
         _ = await store.createSublist(parentTask: existingTask, name: name, emoji: "🗂️")
         dismiss()
+    }
+}
+
+/// §1.3 — pick an existing standalone list to link into a task (a `'link'`
+/// reference, not an owned sublist).
+struct LinkListPickerSheet: View {
+    @EnvironmentObject var store: DataStore
+    @Environment(\.dismiss) private var dismiss
+
+    var parentTask: AppTask
+    var onLinked: () -> Void
+
+    @State private var lists: [AppList] = []
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(candidates) { list in
+                    Button {
+                        Task {
+                            _ = await store.linkExistingList(parentTask: parentTask, targetListId: list.id)
+                            dismiss()
+                            onLinked()
+                        }
+                    } label: {
+                        HStack {
+                            Text(list.emoji ?? "📋")
+                            Text(list.name).foregroundStyle(SCColor.text)
+                            Spacer()
+                            Text("\(list.totalTasks) tasks").font(.system(size: 12)).foregroundStyle(SCColor.text4)
+                        }
+                    }
+                }
+                if candidates.isEmpty {
+                    EmptyRowView(text: "No other lists to link.")
+                }
+            }
+            .navigationTitle("Link a List")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .task { lists = await store.lists().filter { !$0.isArchived } }
+        }
+    }
+
+    /// Exclude the task's own list and any list already linked to it.
+    private var candidates: [AppList] {
+        lists.filter { $0.id != parentTask.listId && $0.id != parentTask.linkedListId }
     }
 }

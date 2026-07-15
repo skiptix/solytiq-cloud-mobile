@@ -12,6 +12,9 @@ struct FilesView: View {
     @State private var uploading = false
     @State private var errorMessage: String?
     @State private var copiedId: String?
+    // §5.1 authoritative quota from the server (falls back to summed sizes).
+    @State private var storageUsed: Int?
+    @State private var storageQuota: Int?
 
     private var totalBytes: Int { files.reduce(0) { $0 + $1.size } }
     private var isAdmin: Bool { appState.currentUser?.isAdmin ?? false }
@@ -90,7 +93,8 @@ struct FilesView: View {
                         .background(Capsule().fill(SCColor.primaryBg))
                 }
             }
-            StorageBarView(usedBytes: totalBytes, totalBytes: 15_000_000_000, isAdmin: isAdmin)
+            StorageBarView(usedBytes: storageUsed ?? totalBytes,
+                           totalBytes: storageQuota ?? 15_000_000_000, isAdmin: isAdmin)
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(SCColor.card))
@@ -253,5 +257,11 @@ struct FilesView: View {
         }
     }
 
-    private func reload() async { files = await store.files() }
+    private func reload() async {
+        files = await store.files()
+        if let info = await store.storageInfo() {
+            storageUsed = info.used
+            storageQuota = info.quota > 0 ? info.quota : nil
+        }
+    }
 }

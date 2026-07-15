@@ -115,6 +115,20 @@ struct TrashAPI {
         _ = try await client.request("/trash/timelines/\(entryId)", method: "DELETE", as: APIClient.EmptyResponse.self)
     }
 
+    // §6.1 — milestone-specific trash bucket, distinct from the timeline one.
+    struct MilestoneTrashRow: Decodable { var id: Int; var milestone: APIMilestoneDTO; var deletedAt: String }
+    func milestones() async throws -> [(entryId: String, milestone: AppMilestone, deletedAt: Date)] {
+        struct R: Decodable { var trash: [MilestoneTrashRow] }
+        let rows = try await client.request("/trash/milestones", as: R.self).trash
+        return rows.map { (String($0.id), $0.milestone.toApp(), ServerDate.parse($0.deletedAt) ?? .now) }
+    }
+    func restoreMilestone(entryId: String) async throws {
+        _ = try await client.request("/trash/milestones/\(entryId)/restore", method: "POST", as: APIClient.EmptyResponse.self)
+    }
+    func deleteMilestoneForever(entryId: String) async throws {
+        _ = try await client.request("/trash/milestones/\(entryId)", method: "DELETE", as: APIClient.EmptyResponse.self)
+    }
+
     func emptyAll() async throws {
         _ = try await client.request("/trash/empty", method: "DELETE", as: APIClient.EmptyResponse.self)
     }

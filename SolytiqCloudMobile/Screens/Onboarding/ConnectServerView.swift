@@ -273,7 +273,7 @@ struct ConnectServerView: View {
             guard let token = result.token, let user = result.user, let url = APIClient.normalize(serverInput: serverURL) else {
                 shakeInvalid("Unexpected response from the server."); return
             }
-            await appState.didConnectToServer(url: url, token: token, user: user.toApp())
+            await appState.didConnectToServer(url: url, token: token, user: user.toApp(), connectionId: result.connectionId)
         } catch {
             shakeInvalid((error as? APIError)?.errorDescription ?? error.localizedDescription)
         }
@@ -288,7 +288,7 @@ struct ConnectServerView: View {
             guard let token = result.token, let user = result.user, let url = APIClient.normalize(serverInput: serverURL) else {
                 shakeInvalid("Unexpected response from the server."); return
             }
-            await appState.didConnectToServer(url: url, token: token, user: user.toApp())
+            await appState.didConnectToServer(url: url, token: token, user: user.toApp(), connectionId: result.connectionId)
         } catch {
             shakeInvalid((error as? APIError)?.errorDescription ?? "Invalid code — please try again.")
         }
