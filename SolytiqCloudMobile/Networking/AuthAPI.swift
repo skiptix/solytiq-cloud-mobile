@@ -103,7 +103,7 @@ struct AuthAPI {
     }
     func members() async throws -> [MemberBasic] {
         struct R: Decodable { var members: [MemberBasic] }
-        return try await client.request("/auth/members/basic").members
+        return try await client.request("/auth/members/basic", as: R.self).members
     }
 
     struct FeatureFlags: Decodable { var twoFAEnabled: Bool; var mcpEnabled: Bool }

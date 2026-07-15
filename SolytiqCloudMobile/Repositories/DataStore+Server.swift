@@ -136,7 +136,12 @@ extension DataStore {
     func sendAIMessage(sessionId: String?, priorMessages: [AppChatMessage], content: String) async -> (sessionId: String, reply: AppChatMessage)? {
         guard isServer else { return nil }
         do {
-            let sid = try await sessionId ?? aiAPI.createSession()
+            let sid: String
+            if let sessionId {
+                sid = sessionId
+            } else {
+                sid = try await aiAPI.createSession()
+            }
 
             var wire: [AIAPI.ChatMessage] = [AIAPI.ChatMessage(role: "system", content: aiSystemPrompt)]
             wire += priorMessages

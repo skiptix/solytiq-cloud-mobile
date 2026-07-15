@@ -43,13 +43,13 @@ struct SyncCache {
             if change.op == "delete" {
                 folders.removeAll { $0.id == change.entityId }
             } else if let dto = change.folder {
-                upsert(&folders, dto.toApp())
+                Self.upsert(&folders, dto.toApp())
             }
         case "timeline":
             if change.op == "delete" {
                 timelines.removeAll { $0.id == change.entityId }
             } else if let dto = change.timeline {
-                upsert(&timelines, dto.toApp())
+                Self.upsert(&timelines, dto.toApp())
             }
         default:
             break // signal entities are handled by the engine, not the cache
@@ -61,7 +61,7 @@ struct SyncCache {
     mutating func upsertTask(_ task: AppTask) {
         var t = task
         if t.listName == nil, let lid = t.listId { t.listName = lists.first { $0.id == lid }?.name }
-        upsert(&tasks, t)
+        Self.upsert(&tasks, t)
         // Keep the copy nested inside its list's section in step too.
         guard let lid = t.listId, let li = lists.firstIndex(where: { $0.id == lid }) else { return }
         for si in lists[li].sections.indices {
@@ -82,7 +82,7 @@ struct SyncCache {
     }
 
     mutating func upsertList(_ list: AppList) {
-        upsert(&lists, list)
+        Self.upsert(&lists, list)
         tasks.removeAll { $0.listId == list.id }
         tasks.append(contentsOf: list.sections.flatMap { sec in
             sec.tasks.map { var t = $0; t.listName = list.name; return t }
@@ -94,14 +94,14 @@ struct SyncCache {
         tasks.removeAll { $0.listId == id }
     }
 
-    private mutating func upsert<T: Identifiable>(_ array: inout [T], _ element: T) {
+    private static func upsert<T: Identifiable>(_ array: inout [T], _ element: T) {
         if let i = array.firstIndex(where: { $0.id == element.id }) { array[i] = element }
         else { array.append(element) }
     }
 
-    mutating func upsertFolder(_ f: AppFolder) { upsert(&folders, f) }
+    mutating func upsertFolder(_ f: AppFolder) { Self.upsert(&folders, f) }
     mutating func removeFolder(id: String) { folders.removeAll { $0.id == id } }
-    mutating func upsertTimeline(_ t: AppTimeline) { upsert(&timelines, t) }
+    mutating func upsertTimeline(_ t: AppTimeline) { Self.upsert(&timelines, t) }
     mutating func removeTimeline(id: String) { timelines.removeAll { $0.id == id } }
 }
 

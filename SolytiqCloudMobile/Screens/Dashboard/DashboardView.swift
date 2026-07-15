@@ -282,10 +282,13 @@ struct DashboardView: View {
     }
 }
 
-struct DashboardFilterPayload: Identifiable {
+struct DashboardFilterPayload: Identifiable, Hashable {
     var id: String { title }
     var title: String
     var tasks: [AppTask]
+
+    static func == (lhs: DashboardFilterPayload, rhs: DashboardFilterPayload) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
 /// Read-only filtered list pushed from a Dashboard stat tile.
