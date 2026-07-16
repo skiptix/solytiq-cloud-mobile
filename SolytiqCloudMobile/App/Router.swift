@@ -29,6 +29,9 @@ enum SheetRoute: Identifiable {
     case moveTask(AppTask)
     case workspaceSettings(AppWorkspace)
     case search
+    case archived
+    case markdownList(id: String?)
+    case automations
 
     var id: String {
         switch self {
@@ -52,6 +55,9 @@ enum SheetRoute: Identifiable {
         case .moveTask(let t): return "moveTask-\(t.id)"
         case .workspaceSettings(let w): return "workspaceSettings-\(w.id)"
         case .search: return "search"
+        case .archived: return "archived"
+        case .markdownList(let id): return "markdownList-\(id ?? "new")"
+        case .automations: return "automations"
         }
     }
 }

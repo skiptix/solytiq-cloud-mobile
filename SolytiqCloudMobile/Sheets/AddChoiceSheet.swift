@@ -18,6 +18,9 @@ struct AddChoiceSheet: View {
                     open { router.sheet = .addTimeline }
                 }
                 if appState.mode == .server {
+                    choiceRow(icon: "doc.richtext", color: Color(hex: "#f59e0b"), title: "New Markdown List", subtitle: "A free-form markdown document") {
+                        open { router.sheet = .markdownList(id: nil) }
+                    }
                     choiceRow(icon: "square.on.square", color: Color(hex: "#9d8dff"), title: "From Template", subtitle: "Start from a saved list or timeline") {
                         open { router.sheet = .templates }
                     }
@@ -28,7 +31,7 @@ struct AddChoiceSheet: View {
             .navigationTitle("Add")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .presentationDetents([.height(appState.mode == .server ? 390 : 320)])
+        .presentationDetents([.height(appState.mode == .server ? 460 : 320)])
     }
 
     private func open(_ action: @escaping () -> Void) {

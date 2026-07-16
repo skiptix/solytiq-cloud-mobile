@@ -71,6 +71,7 @@ struct TrashSheet: View {
         case .folder: return "folder"
         case .timeline: return "chart.xyaxis.line"
         case .milestone: return "flag"
+        case .markdownList: return "doc.richtext"
         }
     }
 

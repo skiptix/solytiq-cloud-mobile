@@ -3,6 +3,7 @@ import SwiftUI
 struct FolderDashboardView: View {
     @EnvironmentObject var store: DataStore
     @EnvironmentObject var router: Router
+    @EnvironmentObject var appState: AppState
     @EnvironmentObject var sync: SyncEngine
     @Environment(\.dismiss) private var dismiss
 
@@ -10,6 +11,8 @@ struct FolderDashboardView: View {
     @State private var folder: AppFolder?
     @State private var lists: [AppList] = []
     @State private var confirmDelete = false
+    @State private var showEdit = false
+    @State private var showMove = false
 
     private var dueToday: [AppTask] {
         lists.flatMap { $0.sections.flatMap(\.tasks) }
@@ -69,8 +72,20 @@ struct FolderDashboardView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Delete Folder", systemImage: "trash", role: .destructive) { confirmDelete = true }
+                Menu {
+                    Button("Edit Folder", systemImage: "pencil") { showEdit = true }
+                    if appState.mode == .server, appState.workspaces.count > 1 {
+                        Button("Move to Workspace…", systemImage: "square.stack.3d.up") { showMove = true }
+                    }
+                    Button("Delete Folder", systemImage: "trash", role: .destructive) { confirmDelete = true }
+                } label: { Image(systemName: "ellipsis.circle") }
             }
+        }
+        .sheet(isPresented: $showEdit) {
+            if let folder { EditFolderSheet(folder: folder) { await reload() } }
+        }
+        .sheet(isPresented: $showMove) {
+            if let folder { MoveFolderSheet(folder: folder) { dismiss() } }
         }
         .confirmDelete(isPresented: $confirmDelete, title: "Delete Folder?", message: "Lists inside will move to the top level, not be deleted.") {
             Task { await store.deleteFolder(id: folderId); dismiss() }

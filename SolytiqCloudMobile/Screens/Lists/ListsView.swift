@@ -9,6 +9,7 @@ struct ListsView: View {
     @State private var lists: [AppList] = []
     @State private var folders: [AppFolder] = []
     @State private var timelines: [AppTimeline] = []
+    @State private var markdownDocs: [AppMarkdownList] = []
     @State private var collapsedFolders: Set<String> = []
 
     private var rootLists: [AppList] { lists.filter { $0.folderId == nil } }
@@ -33,8 +34,23 @@ struct ListsView: View {
 
                     timelinesEntry
 
+                    if appState.mode == .server {
+                        automationsEntry
+                    }
+
                     ForEach(folders) { folder in
                         folderSection(folder)
+                    }
+
+                    if !markdownDocs.isEmpty {
+                        VStack(spacing: 0) {
+                            SectionHeaderView(title: "Markdown Documents", rightText: "\(markdownDocs.count)")
+                            Card {
+                                ForEach(Array(markdownDocs.enumerated()), id: \.element.id) { idx, doc in
+                                    markdownRow(doc, showDivider: idx < markdownDocs.count - 1)
+                                }
+                            }
+                        }
                     }
 
                     if !rootLists.isEmpty {
@@ -62,7 +78,12 @@ struct ListsView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 14) {
-                        Button { router.sheet = .trash } label: { Image(systemName: "trash") }
+                        Menu {
+                            Button("Trash", systemImage: "trash") { router.sheet = .trash }
+                            if appState.mode == .server {
+                                Button("Archived Lists", systemImage: "archivebox") { router.sheet = .archived }
+                            }
+                        } label: { Image(systemName: "ellipsis.circle") }
                         ProfileToolbarButton()
                     }
                 }
@@ -78,6 +99,10 @@ struct ListsView: View {
             .task { await reload() }
             .refreshable { await reload() }
             .onChange(of: sync.revision) { _, _ in
+                Task { await reload() }
+            }
+            // §18 — markdown lists are a SIGNAL sync entity (refetch on bump).
+            .onChange(of: sync.entityRevisions) { _, _ in
                 Task { await reload() }
             }
             .onChange(of: store.localRevision) { _, _ in
@@ -166,6 +191,53 @@ struct ListsView: View {
         .padding(.horizontal, 18)
     }
 
+    // ── Automations entry (server only) ──
+    private var automationsEntry: some View {
+        Button { router.sheet = .automations } label: {
+            HStack(spacing: 13) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 13, style: .continuous).fill(Color(hex: "#f59e0b").opacity(0.14))
+                    Image(systemName: "bolt.badge.automatic").font(.system(size: 20)).foregroundStyle(Color(hex: "#f59e0b"))
+                }
+                .frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Automations").font(.system(size: 15, weight: .semibold)).foregroundStyle(SCColor.text)
+                    Text("Trigger-and-action workflows").font(.system(size: 12.5)).foregroundStyle(SCColor.text3)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 14)).foregroundStyle(SCColor.text4)
+            }
+            .padding(14)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(SCColor.card))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(SCColor.border, lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 18)
+    }
+
+    private func markdownRow(_ doc: AppMarkdownList, showDivider: Bool) -> some View {
+        Button { router.sheet = .markdownList(id: doc.id) } label: {
+            HStack(spacing: 13) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(hex: "#f59e0b").opacity(0.14))
+                    Text(doc.emoji ?? "📝").font(.system(size: 22))
+                }
+                .frame(width: 46, height: 46)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(doc.title).font(.system(size: 15, weight: .semibold)).foregroundStyle(SCColor.text).lineLimit(1)
+                    Text("Markdown document").font(.system(size: 12)).foregroundStyle(SCColor.text4)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 14)).foregroundStyle(SCColor.text4)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+        .overlay(alignment: .bottom) {
+            if showDivider { Divider().opacity(0.5).padding(.leading, 16) }
+        }
+    }
+
     // ── Folder section: colored header + row-in-card lists ──
     private func folderSection(_ folder: AppFolder) -> some View {
         let items = lists(in: folder)
@@ -174,9 +246,12 @@ struct ListsView: View {
         return VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Button {
+                    let nowCollapsed = !collapsed
                     withAnimation(SCMotion.interactive) {
-                        if collapsed { collapsedFolders.remove(folder.id) } else { collapsedFolders.insert(folder.id) }
+                        if nowCollapsed { collapsedFolders.insert(folder.id) } else { collapsedFolders.remove(folder.id) }
                     }
+                    // §3 — persist so the collapse state syncs across devices.
+                    Task { await store.setFolderCollapsed(id: folder.id, collapsed: nowCollapsed) }
                 } label: {
                     Image(systemName: collapsed ? "chevron.right" : "chevron.down")
                         .font(.system(size: 14, weight: .semibold)).foregroundStyle(fc)
@@ -267,5 +342,8 @@ struct ListsView: View {
         lists = await l
         folders = await f
         timelines = await t
+        markdownDocs = await store.markdownLists()
+        // §3 — seed collapse state from the (server-synced) `collapsed` field.
+        collapsedFolders = Set(folders.filter(\.collapsed).map(\.id))
     }
 }

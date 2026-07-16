@@ -149,6 +149,16 @@ struct APIWorkspaceDTO: Codable {
     }
 }
 
+struct APIMeetingAttendeeDTO: Codable {
+    var userId: String?
+    var id: String?
+    var username: String
+    var fullName: String?
+    func toApp() -> AppMeetingAttendee {
+        AppMeetingAttendee(id: userId ?? id ?? username, username: username, fullName: fullName)
+    }
+}
+
 struct APIMeetingDTO: Codable {
     var id: IntOrString
     var title: String
@@ -159,11 +169,16 @@ struct APIMeetingDTO: Codable {
     var endTime: String?
     var allDay: Bool
     var color: String?
+    var recurrenceId: String?
+    var creatorId: String?
+    var organizerId: String?
+    var attendees: [APIMeetingAttendeeDTO]?
 
     func toApp() -> AppMeeting {
         AppMeeting(id: id.stringValue, title: title, date: date, allDay: allDay, startTime: startTime,
                     endTime: endTime, location: location, description: description, colorHex: color ?? "#3b82f6",
-                    workspaceId: nil)
+                    workspaceId: nil, recurrenceId: recurrenceId, organizerId: organizerId ?? creatorId,
+                    attendees: (attendees ?? []).map { $0.toApp() })
     }
 }
 

@@ -27,6 +27,7 @@ struct SettingsView: View {
     @State private var caldavPassword: String?
     @State private var caldavURL: String?
     @State private var caldavUsername: String?
+    @State private var showOpenSharedLink = false
 
     var body: some View {
         NavigationStack {
@@ -35,6 +36,11 @@ struct SettingsView: View {
                 appearanceSection
                 if appState.mode == .server {
                     securitySection
+                    Section {
+                        Button { showOpenSharedLink = true } label: {
+                            Label("Open a Shared Link", systemImage: "link")
+                        }
+                    }
                     devicesSection
                     connectedAppsSection
                     calDAVSection
@@ -59,6 +65,7 @@ struct SettingsView: View {
                 Task { await loadPhoto(newItem) }
             }
             .sheet(isPresented: $showChangePassword) { ChangePasswordSheet() }
+            .sheet(isPresented: $showOpenSharedLink) { OpenSharedLinkSheet() }
             .confirmDelete(isPresented: $confirmSignOut, title: "Sign Out?", message: "You'll need to sign in again to reconnect to this server.", confirmLabel: "Sign Out") {
                 Task { await appState.signOutOfServer() }
             }

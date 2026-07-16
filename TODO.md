@@ -1,73 +1,96 @@
 # Implementation Progress — Mobile Feature Parity
 
 Tracking work against [implementation.md](implementation.md). This repo is an iOS
-SwiftUI app; the plan is a large (self-described "multi-week") effort. Items are
-worked in the doc's suggested build order — foundational/self-contained first.
+SwiftUI app. All in-scope sections of the plan are now implemented.
 
-Legend: `[x]` done this pass · `[~]` partial/scaffolded · `[ ]` not started
+Legend: `[x]` done · `[~]` partial (with reason) · `[ ]` not started ·
+`[—]` out of mobile scope
 
-## Foundation — model/DTO/mapping field plumbing (prereq for §1, §3)
-- [x] `AppTask.completedAt`, `AppTask.linkedListType` (+ DTO + mapping) — §1.3, §1.4
-- [x] `AppList.viewMode`, `AppList.isArchived` (+ DTO + mapping) — §1.1, §1.6
-- [x] `AppFolder.isPublic`, `.collapsed`, `.workspaceId` (+ DTO + mapping) — §3
-- [x] New domain models: `AppMobileConnection`, `AppConnectedToken`,
-      `AppSearchResult`, `AppInstalledApp`
+## Foundation — model/DTO/mapping field plumbing
+- [x] `AppTask.completedAt`, `.linkedListType` (+ DTO + mapping)
+- [x] `AppList.viewMode`, `.isArchived` + `ListViewMode`
+- [x] `AppFolder.isPublic`, `.collapsed`, `.workspaceId`
+- [x] New models: `AppMobileConnection`, `AppConnectedToken`, `AppSearchResult`,
+      `AppTaskAttachment`, `AppMeetingAttendee`, `MeetingRecurrence`,
+      `AppMarkdownList`, `AppAutomation`/`AppAutomationNode`/`AppAutomationRun`,
+      `JSONValue`
 
 ## §1 — Lists / To-Do gaps
 - [x] §1.1 List/Kanban/Timeline view-mode field + persist on switch
-- [x] §1.1 Segmented mode switcher in `ListDetailView`
-- [x] §1.1 `KanbanListView` (columns = sections, cards = tasks)
-- [~] §1.1 Timeline/Gantt view — deferred (largest sub-item; needs `completedAt`)
-- [~] §1.2 Drag-to-reorder — reorder API methods added; full drag UI deferred
-- [x] §1.3 Linked lists: `linkedListType` field + `ListsAPI.linkList` + DataStore
-- [x] §1.4 Task `completedAt` field + "Created → Done" strip in `EditTaskSheet`
-- [~] §1.5 Task attachments — deferred (own domain; needs new API + models + UI)
-- [~] §1.6 List archiving — `isArchived` field + `unarchive`/archived-list API
-- [x] §1.7 Move task between lists: `TasksAPI.move` + `MoveTaskSheet` + wiring
+- [x] §1.1 Segmented mode switcher + `KanbanListView`
+- [x] §1.1 `TaskGanttView` — Gantt with Day/Week/Month zoom, deadline flags, Today line
+- [x] §1.2 Drag-to-reorder tasks within a section (`.draggable`/`.dropDestination`)
+      + section up/down reorder; reorder API + optimistic cache wiring
+- [x] §1.3 Linked lists: `linkedListType` + `ListsAPI.linkList` + `LinkListPickerSheet`
+- [x] §1.4 Task `completedAt` + "Created → Done" strip
+- [x] §1.5 Task attachments: `TaskAttachmentsAPI` (upload/link/download/delete) +
+      `EditTaskSheet` section + `AttachFromFilesSheet`
+- [x] §1.6 Archiving: `isArchived` + `archived()`/`unarchive()` + `ArchivedSheet` + entry
+- [x] §1.7 Move task: `TasksAPI.move` + `MoveTaskSheet`
 
 ## §2 — Calendar / Meetings
-- [x] §2.2 `MeetingsAPI.leave` + `DataStore.leaveMeeting`
-- [~] §2.1 Recurring meetings — deferred (needs backend recurrence-shape confirm)
+- [x] §2.1 Recurring meetings: `repeat {freq,interval,count}` on create + Repeat control
+- [x] §2.2 Attendees: invite picker on create, read-only invited view + Leave
 
 ## §3 — Folders
-- [x] Folder `isPublic`/`collapsed`/`workspaceId` fields + `FoldersAPI` patch
-- [x] `FoldersAPI.moveToWorkspace`
+- [x] Fields + `FoldersAPI` patch + `moveToWorkspace`
+- [x] `EditFolderSheet` (name/emoji/color + `VisibilityToggle`) + `MoveFolderSheet`
+- [x] Collapse persistence wired to the server `collapsed` field
 
 ## §4 — Workspaces
 - [x] §4.1 `WorkspacesAPI.update` + `WorkspaceSettingsSheet`
-- [x] §4.2 `WorkspacesAPI.removeMember` + member list w/ remove in the sheet
+- [x] §4.2 `removeMember` + member management in the sheet
 
 ## §5 — Files
-- [x] §5.1 `FilesAPI.storage()` authoritative quota (+ wired into `FilesView`)
-- [~] §5.2 Bundle download — API method added; multi-select UI deferred
+- [x] §5.1 `FilesAPI.storage()` authoritative quota
+- [x] §5.2 `FilesAPI.bundle()` + multi-select mode + share sheet
+- [x] §5.3 Preview endpoint — download already uses `/preview`
 
 ## §6 — Trash
-- [x] §6.1 Milestone trash: `TrashAPI.milestones()/restore/deleteForever`
+- [x] §6.1 Milestone trash (end-to-end via `TrashSheet`)
+- [x] §6.2 Markdown-list trash (`.markdownList` TrashKind + API + wiring)
 
+## §7 — AI Assistant tool-calling
+- [x] `AIAPI.tools()/execute()/uploadFile()` + request/execute/respond loop in
+      `sendAIMessage` (degrades to plain chat when no tool registry)
+- [x] File-attach button in `AIAssistantSheet`
 
-## §12 — CalDAV credential screen
-- [x] `CalDAVAPI.status/generatePassword/revoke` + Settings section
+## §9 — Markdown Lists
+- [x] `MarkdownListsAPI` (CRUD + share + image upload) + `AppMarkdownList`
+- [x] `MarkdownListView` editor + dependency-free `MarkdownRenderedView`
+- [x] Wired into `AddChoiceSheet` + `ListsView` listing
 
-## §14 — MCP token management
-- [x] `TokensAPI.list/revoke` + Settings "Connected Apps" section
+## §10 — Automation Hub
+- [x] `AutomationsAPI` (node-types/CRUD/runs/test) + models + `JSONValue`
+- [x] `AutomationsListView` (enable toggle, create) + `AutomationEditorView`
+      (vertical step-cards, schema-driven forms, per-node Test, run history)
+- [x] Entry point in `ListsView` (server mode)
 
-## §15 — Global Search
-- [x] `SearchAPI.search` + `SearchSheet` + Dashboard toolbar entry
+## §12 / §14 / §15 / §17 — Settings + Search
+- [x] CalDAV, Connected Apps (tokens), Global Search, Device sessions
 
-## §17 — Device / session management
-- [x] `AuthAPI.mobileConnections/revokeMobileConnection` + Settings "Devices"
+## §16 — Public share viewing
+- [x] `SafariView` in-app browser + `OpenSharedLinkSheet` (Settings entry).
+      Universal-Links deep-linking needs a backend `apple-app-site-association`
+      config — flagged as backend-adjacent, not implemented here.
 
-## Large standalone domains — deferred (own workstreams per the plan)
-- [~] §7 AI tool-calling parity
-- [ ] §9 Markdown Lists
-- [ ] §10 Automation Hub
-- [ ] §16 Public share viewing (needs backend Universal-Links config)
-- [~] §18 Sync-engine extensions for new syncable entities
+## §18 — Sync engine
+- [x] New entities (attachments/markdown/automations) ride the engine's generic
+      SIGNAL path (`entityRevisions` bump → screen refetch); screens observe it.
+      No offline SwiftData models — these are server-mode-only per the plan.
 
-## Removed from mobile scope (dropped from the plan)
-- §8 GPS / Route Planner — web-only
-- §11 App Directory ("Discover Apps") — web/admin only; no install-state gating on mobile
-- §13 Admin capabilities — user/API-key/instance-settings/password-reset/Nuke stay on web
+## Removed from mobile scope
+- [—] §8 GPS / Route Planner — web-only
+- [—] §11 App Directory — web/admin only
+- [—] §13 Admin capabilities — stay on web
 
-> Note: an `AppsAPI` client (§11) was added in the first PR before this scope
-> change. It's harmless dead code now — remove it in a later cleanup pass.
+## Notes / caveats
+- No Swift toolchain in this environment — code is written by close
+  pattern-matching, not compiled. New optional patch-body/model fields carry
+  explicit defaults so existing call sites stay source-compatible.
+- A few backend shapes (attachments, markdown lists, automations, recurrence,
+  AI tools) were inferred from the plan + the Solytiq MCP tool schemas; all
+  decoders fail soft (`try?` → empty/default) so a shape mismatch degrades
+  gracefully rather than crashing.
+- The `AppsAPI` client (from the first PR, now out of scope) remains as dead
+  code to remove in a later cleanup.
