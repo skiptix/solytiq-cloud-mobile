@@ -44,8 +44,6 @@ Legend: `[x]` done this pass · `[~]` partial/scaffolded · `[ ]` not started
 ## §6 — Trash
 - [x] §6.1 Milestone trash: `TrashAPI.milestones()/restore/deleteForever`
 
-## §11 — App Directory (read-only gate)
-- [x] `AppsAPI.list/install/uninstall` + `DataStore.installedApps`
 
 ## §12 — CalDAV credential screen
 - [x] `CalDAVAPI.status/generatePassword/revoke` + Settings section
@@ -61,9 +59,15 @@ Legend: `[x]` done this pass · `[~]` partial/scaffolded · `[ ]` not started
 
 ## Large standalone domains — deferred (own workstreams per the plan)
 - [~] §7 AI tool-calling parity
-- [ ] §8 GPS / Route Planner (largest single item)
 - [ ] §9 Markdown Lists
 - [ ] §10 Automation Hub
-- [ ] §13 Admin capabilities (needs scope confirmation on destructive actions)
 - [ ] §16 Public share viewing (needs backend Universal-Links config)
 - [~] §18 Sync-engine extensions for new syncable entities
+
+## Removed from mobile scope (dropped from the plan)
+- §8 GPS / Route Planner — web-only
+- §11 App Directory ("Discover Apps") — web/admin only; no install-state gating on mobile
+- §13 Admin capabilities — user/API-key/instance-settings/password-reset/Nuke stay on web
+
+> Note: an `AppsAPI` client (§11) was added in the first PR before this scope
+> change. It's harmless dead code now — remove it in a later cleanup pass.
