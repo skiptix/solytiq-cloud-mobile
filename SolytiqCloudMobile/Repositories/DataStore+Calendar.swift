@@ -14,9 +14,9 @@ extension DataStore {
     }
 
     @discardableResult
-    func createMeeting(_ m: AppMeeting) async -> AppMeeting? {
+    func createMeeting(_ m: AppMeeting, recurrence: MeetingRecurrence? = nil, inviteeUsernames: [String] = []) async -> AppMeeting? {
         if isServer {
-            let created = try? await meetingsAPI.create(m)
+            let created = try? await meetingsAPI.create(m, recurrence: recurrence, inviteeUsernames: inviteeUsernames)
             sync.noteMutationSettled()
             return created
         }

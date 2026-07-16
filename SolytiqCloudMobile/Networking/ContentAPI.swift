@@ -253,14 +253,22 @@ struct MeetingsAPI {
         return try await client.request("/meetings", query: q, as: R.self).meetings.map { $0.toApp() }
     }
 
+    /// §2.1 recurrence rule shape the server expects on create (matches the
+    /// `repeat: {freq, interval, count}` payload the assistant tool uses).
+    struct RepeatBody: Encodable { var freq: String; var interval: Int; var count: Int }
+
     struct Body: Encodable {
         var id: String?; var title: String; var description: String?; var location: String?
         var date: String; var startTime: String?; var endTime: String?; var allDay: Bool; var color: String?
+        var `repeat`: RepeatBody? = nil            // §2.1 — omitted for one-off meetings
+        var inviteeUsernames: [String]? = nil      // §2.2 — omitted when no attendees
     }
-    func create(_ m: AppMeeting) async throws -> AppMeeting {
+    func create(_ m: AppMeeting, recurrence: MeetingRecurrence? = nil, inviteeUsernames: [String] = []) async throws -> AppMeeting {
         struct R: Decodable { var meeting: APIMeetingDTO }
         let body = Body(id: nil, title: m.title, description: m.description, location: m.location,
-                         date: m.date, startTime: m.startTime, endTime: m.endTime, allDay: m.allDay, color: m.colorHex)
+                         date: m.date, startTime: m.startTime, endTime: m.endTime, allDay: m.allDay, color: m.colorHex,
+                         repeat: recurrence.map { RepeatBody(freq: $0.freq.rawValue, interval: $0.interval, count: $0.count) },
+                         inviteeUsernames: inviteeUsernames.isEmpty ? nil : inviteeUsernames)
         return try await client.request("/meetings", method: "POST", body: body, as: R.self).meeting.toApp()
     }
 

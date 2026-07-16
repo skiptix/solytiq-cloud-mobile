@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 enum EditTaskMode {
     case create(listId: String?, sectionId: String?, presetDeadline: String?)
@@ -26,6 +27,14 @@ struct EditTaskSheet: View {
     @State private var sublistName = ""
     @State private var showSublistPrompt = false
     @State private var showLinkPicker = false
+    // §1.5 attachments
+    @State private var attachments: [AppTaskAttachment] = []
+    @State private var showAttachmentImporter = false
+    @State private var showFilesPicker = false
+    @State private var uploadingAttachment = false
+    @State private var attachmentShareURL: URL?
+    @State private var showAttachmentShare = false
+    @State private var attachmentError: String?
     @FocusState private var titleFocused: Bool
 
     private static let badges = ["Work", "Personal", "Urgent", "Tip"]
@@ -92,6 +101,10 @@ struct EditTaskSheet: View {
                         TextField("Add a subitem…", text: $newSubItem)
                         Button("Add") { addSubItem() }.disabled(newSubItem.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
+                }
+
+                if let existingTask, store.isServer {
+                    attachmentsSection(existingTask)
                 }
 
                 if let existingTask, existingTask.checked, let completedAt = existingTask.completedAt {
@@ -161,8 +174,115 @@ struct EditTaskSheet: View {
                     LinkListPickerSheet(parentTask: existingTask) { dismiss() }
                 }
             }
+            .fileImporter(isPresented: $showAttachmentImporter, allowedContentTypes: [.data, .item, .content],
+                          allowsMultipleSelection: true) { result in
+                Task { await handleAttachmentImport(result) }
+            }
+            .sheet(isPresented: $showFilesPicker) {
+                if let existingTask {
+                    AttachFromFilesSheet(taskId: existingTask.id) { await loadAttachments() }
+                }
+            }
+            .sheet(isPresented: $showAttachmentShare) {
+                if let attachmentShareURL { ShareSheet(items: [attachmentShareURL]) }
+            }
         }
         .onAppear(perform: populate)
+        .task { await loadAttachments() }
+    }
+
+    // MARK: §1.5 Attachments
+
+    @ViewBuilder
+    private func attachmentsSection(_ task: AppTask) -> some View {
+        Section("Attachments") {
+            ForEach(attachments) { attachment in
+                Button { Task { await openAttachment(attachment) } } label: {
+                    HStack(spacing: 10) {
+                        FileBadgeView(mime: attachment.mimeType, size: 30)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(attachment.fileName).font(.system(size: 14)).foregroundStyle(SCColor.text).lineLimit(1)
+                            Text(attachment.isLinked ? "Linked from Files" : byteLabel(attachment.size))
+                                .font(.system(size: 11)).foregroundStyle(SCColor.text4)
+                        }
+                        Spacer()
+                        Image(systemName: "arrow.down.circle").font(.system(size: 14)).foregroundStyle(SCColor.text4)
+                    }
+                }
+                .buttonStyle(.plain)
+                .swipeActions(edge: .trailing) {
+                    Button("Remove", role: .destructive) {
+                        Task { await store.deleteTaskAttachment(attachmentId: attachment.id); await loadAttachments() }
+                    }
+                }
+            }
+            if let attachmentError {
+                Text(attachmentError).font(.system(size: 12)).foregroundStyle(SCColor.danger)
+            }
+            Menu {
+                Button { showAttachmentImporter = true } label: { Label("Upload a File", systemImage: "arrow.up.doc") }
+                Button { showFilesPicker = true } label: { Label("Attach from Files", systemImage: "folder") }
+            } label: {
+                HStack {
+                    if uploadingAttachment { ProgressView() } else { Image(systemName: "paperclip") }
+                    Text(uploadingAttachment ? "Uploading…" : "Add Attachment")
+                }
+                .font(.system(size: 13.5, weight: .semibold))
+            }
+            .disabled(uploadingAttachment)
+        }
+    }
+
+    private func byteLabel(_ bytes: Int) -> String {
+        let d = Double(bytes)
+        if d >= 1e6 { return String(format: "%.1f MB", d / 1e6) }
+        if d >= 1e3 { return String(format: "%.0f KB", d / 1e3) }
+        return "\(bytes) B"
+    }
+
+    private func loadAttachments() async {
+        guard let existingTask, store.isServer else { return }
+        attachments = await store.taskAttachments(taskId: existingTask.id)
+    }
+
+    private func handleAttachmentImport(_ result: Result<[URL], Error>) async {
+        guard let existingTask, case .success(let urls) = result else { return }
+        uploadingAttachment = true
+        defer { uploadingAttachment = false }
+        for url in urls {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            guard let data = try? Data(contentsOf: url) else { continue }
+            do {
+                _ = try await store.uploadTaskAttachment(taskId: existingTask.id, fileName: url.lastPathComponent,
+                                                         mimeType: Self.mimeType(for: url), data: data)
+            } catch {
+                attachmentError = (error as? APIError)?.errorDescription ?? "Upload failed."
+            }
+        }
+        await loadAttachments()
+    }
+
+    private func openAttachment(_ attachment: AppTaskAttachment) async {
+        do {
+            attachmentShareURL = try await store.downloadTaskAttachment(attachment)
+            showAttachmentShare = true
+        } catch {
+            attachmentError = (error as? APIError)?.errorDescription ?? "Couldn't open attachment."
+        }
+    }
+
+    private static func mimeType(for url: URL) -> String {
+        switch url.pathExtension.lowercased() {
+        case "pdf": return "application/pdf"
+        case "png": return "image/png"
+        case "jpg", "jpeg": return "image/jpeg"
+        case "gif": return "image/gif"
+        case "zip": return "application/zip"
+        case "txt": return "text/plain"
+        case "doc", "docx": return "application/msword"
+        default: return "application/octet-stream"
+        }
     }
 
     /// §1.4 — compact "Created → Done" strip with a duration badge, shown once
@@ -305,5 +425,51 @@ struct LinkListPickerSheet: View {
     /// Exclude the task's own list and any list already linked to it.
     private var candidates: [AppList] {
         lists.filter { $0.id != parentTask.listId && $0.id != parentTask.linkedListId }
+    }
+}
+
+/// §1.5 — pick an existing uploaded file (from Files) to link onto a task.
+struct AttachFromFilesSheet: View {
+    @EnvironmentObject var store: DataStore
+    @Environment(\.dismiss) private var dismiss
+
+    var taskId: String
+    var onAttached: () async -> Void
+
+    @State private var files: [AppFileItem] = []
+    @State private var loading = true
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if loading {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if files.isEmpty {
+                    ContentUnavailableView("No files", systemImage: "folder",
+                                           description: Text("Upload files from the Files tab first, then link them here."))
+                } else {
+                    List(files) { file in
+                        Button {
+                            Task {
+                                _ = await store.linkTaskAttachment(taskId: taskId, sharedFileId: file.id)
+                                dismiss()
+                                await onAttached()
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                FileBadgeView(mime: file.mimeType, size: 30)
+                                Text(file.name).foregroundStyle(SCColor.text).lineLimit(1)
+                                Spacer()
+                                Image(systemName: "link").font(.system(size: 12)).foregroundStyle(SCColor.text4)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Attach from Files")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .task { files = await store.files(); loading = false }
+        }
     }
 }

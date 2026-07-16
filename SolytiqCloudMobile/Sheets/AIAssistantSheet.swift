@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct AIAssistantSheet: View {
     @EnvironmentObject var store: DataStore
@@ -14,6 +15,8 @@ struct AIAssistantSheet: View {
     @State private var sessionId: String?
     @State private var input = ""
     @State private var sending = false
+    @State private var showImporter = false
+    @State private var uploadingFile = false
 
     var body: some View {
         NavigationStack {
@@ -35,6 +38,12 @@ struct AIAssistantSheet: View {
                 }
                 Divider()
                 HStack(spacing: 10) {
+                    Button { showImporter = true } label: {
+                        if uploadingFile { ProgressView() }
+                        else { Image(systemName: "paperclip").font(.system(size: 20)).foregroundStyle(SCColor.text3) }
+                    }
+                    .disabled(uploadingFile || sending)
+
                     TextField("Ask Sol…", text: $input, axis: .vertical)
                         .padding(.horizontal, 12).padding(.vertical, 9)
                         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(SCColor.cardTinted))
@@ -50,6 +59,24 @@ struct AIAssistantSheet: View {
             .navigationTitle("Sol Assistant")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
+            .fileImporter(isPresented: $showImporter, allowedContentTypes: [.data, .item, .content],
+                          allowsMultipleSelection: false) { result in
+                Task { await attachFile(result) }
+            }
+        }
+    }
+
+    private func attachFile(_ result: Result<[URL], Error>) async {
+        guard case .success(let urls) = result, let url = urls.first else { return }
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let data = try? Data(contentsOf: url) else { return }
+        uploadingFile = true
+        defer { uploadingFile = false }
+        let mime = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+        if let sid = try? await store.uploadAIFile(sessionId: sessionId, fileName: url.lastPathComponent, mimeType: mime, data: data) {
+            sessionId = sid
+            messages.append(AppChatMessage(role: "assistant", content: "📎 Attached **\(url.lastPathComponent)** — ask me anything about it."))
         }
     }
 

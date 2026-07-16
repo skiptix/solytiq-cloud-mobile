@@ -129,6 +129,20 @@ struct TrashAPI {
         _ = try await client.request("/trash/milestones/\(entryId)", method: "DELETE", as: APIClient.EmptyResponse.self)
     }
 
+    // §6.2 — markdown-list trash bucket.
+    struct MarkdownTrashRow: Decodable { var id: Int; var markdownList: MarkdownListsAPI.DTO; var deletedAt: String }
+    func markdownListsTrash() async throws -> [(entryId: String, doc: AppMarkdownList, deletedAt: Date)] {
+        struct R: Decodable { var trash: [MarkdownTrashRow] }
+        let rows = try await client.request("/trash/markdown-lists", as: R.self).trash
+        return rows.map { (String($0.id), $0.markdownList.toApp(), ServerDate.parse($0.deletedAt) ?? .now) }
+    }
+    func restoreMarkdownList(entryId: String) async throws {
+        _ = try await client.request("/trash/markdown-lists/\(entryId)/restore", method: "POST", as: APIClient.EmptyResponse.self)
+    }
+    func deleteMarkdownListForever(entryId: String) async throws {
+        _ = try await client.request("/trash/markdown-lists/\(entryId)", method: "DELETE", as: APIClient.EmptyResponse.self)
+    }
+
     func emptyAll() async throws {
         _ = try await client.request("/trash/empty", method: "DELETE", as: APIClient.EmptyResponse.self)
     }

@@ -31,24 +31,26 @@ struct ListDetailView: View {
                                        onTapTask: { task in router.sheet = .editTask(task) },
                                        onAddTask: { sectionId in router.sheet = .addTask(listId: listId, sectionId: sectionId, presetDeadline: nil) })
                     }
+                } else if mode == .timeline {
+                    VStack(spacing: 12) {
+                        hero(list).padding(.top, 8)
+                        modePicker(list)
+                        TaskGanttView(list: list, onTapTask: { task in router.sheet = .editTask(task) })
+                    }
                 } else {
                     ScrollView {
                         VStack(spacing: 16) {
                             hero(list)
                             modePicker(list)
-                            if mode == .timeline {
-                                timelinePlaceholder
-                            } else {
-                                ForEach(list.sections) { section in
-                                    sectionBlock(section)
-                                }
-                                Button {
-                                    showAddSection = true
-                                } label: {
-                                    Label("Add Section", systemImage: "plus").font(.system(size: 13, weight: .semibold))
-                                }
-                                .padding(.top, 4)
+                            ForEach(list.sections) { section in
+                                sectionBlock(section)
                             }
+                            Button {
+                                showAddSection = true
+                            } label: {
+                                Label("Add Section", systemImage: "plus").font(.system(size: 13, weight: .semibold))
+                            }
+                            .padding(.top, 4)
                         }
                         .padding(.bottom, 100)
                         .padding(.top, 8)
@@ -176,6 +178,15 @@ struct ListDetailView: View {
                         } onTap: {
                             router.sheet = .editTask(task)
                         }
+                        // §1.2 — drag a task onto another to reorder within the section.
+                        .draggable(task.id) {
+                            Text(task.title).padding(8).background(SCColor.card)
+                        }
+                        .dropDestination(for: String.self) { items, _ in
+                            guard let draggedId = items.first else { return false }
+                            reorderWithinSection(section: section, draggedId: draggedId, targetTaskId: task.id)
+                            return true
+                        }
                     }
                 }
             }
@@ -200,6 +211,40 @@ struct ListDetailView: View {
             Text("\(section.tasks.count)").font(.system(size: 11)).foregroundStyle(SCColor.text4)
         }
         .padding(.horizontal, 26).padding(.top, 14).padding(.bottom, 6)
+        .contentShape(Rectangle())
+        .contextMenu {
+            // §1.2 — reliable section reorder (drag-free) via up/down.
+            Button("Move Section Up", systemImage: "arrow.up") { moveSection(section.id, by: -1) }
+            Button("Move Section Down", systemImage: "arrow.down") { moveSection(section.id, by: 1) }
+        }
+    }
+
+    private func moveSection(_ sectionId: String, by offset: Int) {
+        guard let list else { return }
+        var ids = list.sections.map(\.id)
+        guard let idx = ids.firstIndex(of: sectionId) else { return }
+        let target = idx + offset
+        guard target >= 0, target < ids.count else { return }
+        ids.swapAt(idx, target)
+        Task {
+            await store.reorderSections(listId: listId, orderedIds: ids)
+            await reload()
+        }
+    }
+
+    /// §1.2 — move `draggedId` to sit just before `targetTaskId` within the
+    /// same section, then persist the new order.
+    private func reorderWithinSection(section: AppSection, draggedId: String, targetTaskId: String) {
+        guard draggedId != targetTaskId else { return }
+        var ids = section.tasks.map(\.id)
+        guard let from = ids.firstIndex(of: draggedId), let to = ids.firstIndex(of: targetTaskId) else { return }
+        ids.remove(at: from)
+        let insertAt = ids.firstIndex(of: targetTaskId) ?? to
+        ids.insert(draggedId, at: insertAt)
+        Task {
+            await store.reorderSectionTasks(listId: listId, sectionId: section.id, orderedIds: ids)
+            await reload()
+        }
     }
 
     private func toggle(_ task: AppTask) async {
@@ -236,18 +281,6 @@ struct ListDetailView: View {
         .padding(.horizontal, 22)
     }
 
-    /// The Gantt/Timeline view is the section's highest-effort sub-item and is
-    /// tracked as a follow-up; for now this explains where it will live.
-    private var timelinePlaceholder: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "chart.bar.xaxis").font(.system(size: 34)).foregroundStyle(SCColor.text4)
-            Text("Timeline view").font(.system(size: 15, weight: .semibold)).foregroundStyle(SCColor.text2)
-            Text("A Gantt-style timeline of this list's tasks is coming soon. Switch to List or Kanban to work with tasks.")
-                .font(.system(size: 12.5)).foregroundStyle(SCColor.text4)
-                .multilineTextAlignment(.center).padding(.horizontal, 40)
-        }
-        .frame(maxWidth: .infinity).padding(.vertical, 40)
-    }
 }
 
 struct EditListSheet: View {

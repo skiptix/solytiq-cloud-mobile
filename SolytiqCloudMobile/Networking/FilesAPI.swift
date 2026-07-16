@@ -79,6 +79,29 @@ struct FilesAPI {
         return decoded.file.toApp()
     }
 
+    /// §5.2 — server-side zip of several files. `POST /api/files/bundle` with a
+    /// JSON body of file ids returns the archive bytes, which we stash in a temp
+    /// file the UI can hand to the share sheet.
+    func bundle(ids: [String], serverBaseURL: URL, token: String?) async throws -> URL {
+        struct Body: Encodable { var ids: [String] }
+        var request = URLRequest(url: serverBaseURL.appendingPathComponent("api/files/bundle"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        request.httpBody = try JSONEncoder().encode(Body(ids: ids))
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let message = (try? JSONDecoder().decode([String: String].self, from: data))?["error"] ?? "Bundle failed."
+            throw APIError.server(status: (response as? HTTPURLResponse)?.statusCode ?? 0, message: message)
+        }
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dest = dir.appendingPathComponent("solytiq-files.zip")
+        try data.write(to: dest)
+        return dest
+    }
+
     /// Authenticated owner download. The backend serves file bytes at
     /// `GET /api/files/:id/preview` behind the JWT middleware — there is no
     /// public `/download` route for an owner's own file (that only exists for

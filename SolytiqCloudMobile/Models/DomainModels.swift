@@ -127,6 +127,12 @@ struct AppFolder: Identifiable, Codable, Hashable {
     var workspaceId: String? = nil
 }
 
+struct AppMeetingAttendee: Identifiable, Codable, Hashable {
+    var id: String
+    var username: String
+    var fullName: String?
+}
+
 struct AppMeeting: Identifiable, Codable, Hashable {
     var id: String
     var title: String
@@ -138,6 +144,23 @@ struct AppMeeting: Identifiable, Codable, Hashable {
     var description: String?
     var colorHex: String
     var workspaceId: String?
+    /// §2.1 — non-nil when this occurrence belongs to a repeating series.
+    var recurrenceId: String? = nil
+    /// §2.2 — user id of the organizer (nil when unknown / self).
+    var organizerId: String? = nil
+    var attendees: [AppMeetingAttendee] = []
+}
+
+/// §2.1 — a recurrence rule for creating a repeating meeting series in one call.
+struct MeetingRecurrence: Hashable {
+    enum Freq: String, CaseIterable, Identifiable, Hashable {
+        case daily, weekly, monthly, yearly
+        var id: String { rawValue }
+        var label: String { rawValue.capitalized }
+    }
+    var freq: Freq
+    var interval: Int = 1
+    var count: Int          // total occurrences including the first (2–104)
 }
 
 enum MilestoneStatus: String, Codable, CaseIterable, Hashable { case done, inProgress = "in-progress", upcoming }
@@ -169,7 +192,7 @@ struct AppTimeline: Identifiable, Codable, Hashable {
     var milestones: [AppMilestone]
 }
 
-enum TrashKind: String, Codable, Hashable { case task, list, folder, timeline, milestone }
+enum TrashKind: String, Codable, Hashable { case task, list, folder, timeline, milestone, markdownList }
 
 struct AppTrashEntry: Identifiable, Codable, Hashable {
     var id: String
@@ -206,6 +229,76 @@ struct AppFileItem: Identifiable, Codable, Hashable {
     var shareUrl: String?
     var hasPassword: Bool
     var expiresAt: String?
+}
+
+/// §10 — one node in an automation's graph (a trigger or an action).
+struct AppAutomationNode: Identifiable, Codable, Hashable {
+    var id: String
+    var type: String
+    var params: [String: JSONValue]
+
+    init(id: String = UUID().uuidString, type: String, params: [String: JSONValue] = [:]) {
+        self.id = id; self.type = type; self.params = params
+    }
+}
+
+/// §10 — an automation: an ordered graph of one trigger followed by N actions.
+struct AppAutomation: Identifiable, Codable, Hashable {
+    var id: String
+    var name: String
+    var enabled: Bool
+    var graph: [AppAutomationNode]
+
+    var trigger: AppAutomationNode? { graph.first }
+    var actions: [AppAutomationNode] { Array(graph.dropFirst()) }
+}
+
+/// §10 — a schema for a node type, used to render its param form.
+struct AppAutomationNodeType: Identifiable, Codable, Hashable {
+    struct Param: Codable, Hashable {
+        var key: String
+        var label: String?
+        var type: String?          // "string" | "number" | "boolean" | "code" | "isListId" | …
+        var options: [String]?
+    }
+    var id: String                 // the node `type`
+    var label: String
+    var category: String?          // "trigger" | "action"
+    var params: [Param]
+
+    var isTrigger: Bool { category == "trigger" }
+}
+
+/// §10 — one run of an automation (test or live).
+struct AppAutomationRun: Identifiable, Codable, Hashable {
+    struct Step: Codable, Hashable {
+        var nodeId: String?
+        var type: String?
+        var status: String?
+        var input: JSONValue?
+        var output: JSONValue?
+        var error: String?
+    }
+    var id: String
+    var status: String
+    var isTest: Bool
+    var error: String?
+    var steps: [Step]
+    var createdAt: Date?
+}
+
+/// §9 — a free-form markdown document (`markdown_lists`). Server mode only.
+struct AppMarkdownList: Identifiable, Codable, Hashable {
+    var id: String
+    var title: String
+    var content: String
+    var emoji: String?
+    var folderId: String?
+    var workspaceId: String?
+    var isPublic: Bool = false
+    var shareEnabled: Bool = false
+    var shareToken: String?
+    var updatedAt: Date = .now
 }
 
 /// A server-side snapshot of a list's or timeline's full structure that can
@@ -276,6 +369,22 @@ struct AppInstalledApp: Identifiable, Codable, Hashable {
     var name: String
     var description: String?
     var installed: Bool
+}
+
+/// §1.5 — a file attached to a task, either uploaded directly or linked from
+/// an existing `shared_files` row.
+struct AppTaskAttachment: Identifiable, Codable, Hashable {
+    var id: String
+    var taskId: String
+    /// `"upload"` (bytes stored against the task) vs `"linked"` (a reference to
+    /// a file that also lives in Files).
+    var attachmentType: String
+    var fileName: String
+    var mimeType: String
+    var size: Int
+    var sharedFileId: String?
+
+    var isLinked: Bool { attachmentType == "linked" }
 }
 
 /// §15 — one cross-entity global-search hit.

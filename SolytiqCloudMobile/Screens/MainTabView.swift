@@ -78,6 +78,12 @@ struct MainTabView: View {
             WorkspaceSettingsSheet(workspace: workspace)
         case .search:
             SearchSheet()
+        case .archived:
+            ArchivedSheet()
+        case .markdownList(let id):
+            MarkdownListView(markdownListId: id)
+        case .automations:
+            AutomationsListView()
         }
     }
 }

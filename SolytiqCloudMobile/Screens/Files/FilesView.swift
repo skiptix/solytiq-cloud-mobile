@@ -15,6 +15,12 @@ struct FilesView: View {
     // §5.1 authoritative quota from the server (falls back to summed sizes).
     @State private var storageUsed: Int?
     @State private var storageQuota: Int?
+    // §5.2 multi-select bundle download
+    @State private var selecting = false
+    @State private var selectedIds: Set<String> = []
+    @State private var bundling = false
+    @State private var bundleURL: URL?
+    @State private var showBundleShare = false
 
     private var totalBytes: Int { files.reduce(0) { $0 + $1.size } }
     private var isAdmin: Bool { appState.currentUser?.isAdmin ?? false }
@@ -58,19 +64,55 @@ struct FilesView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { showImporter = true } label: { Image(systemName: "plus.circle.fill") }
+                    if selecting {
+                        Button("Cancel") { selecting = false; selectedIds = [] }
+                    } else {
+                        Button { showImporter = true } label: { Image(systemName: "plus.circle.fill") }
+                    }
                 }
-                ToolbarItem(placement: .topBarTrailing) { ProfileToolbarButton() }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if selecting {
+                        Button {
+                            Task { await downloadSelected() }
+                        } label: {
+                            if bundling { ProgressView() } else { Text("Download (\(selectedIds.count))").font(.system(size: 14, weight: .semibold)) }
+                        }
+                        .disabled(selectedIds.isEmpty || bundling)
+                    } else {
+                        HStack(spacing: 14) {
+                            if !files.isEmpty {
+                                Button { selecting = true } label: { Image(systemName: "checkmark.circle") }
+                            }
+                            ProfileToolbarButton()
+                        }
+                    }
+                }
             }
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.data, .item, .content],
                           allowsMultipleSelection: true) { result in
                 Task { await handleImport(result) }
+            }
+            .sheet(isPresented: $showBundleShare) {
+                if let bundleURL { ShareSheet(items: [bundleURL]) }
             }
             .task { await reload() }
             .refreshable { await reload() }
             .onChange(of: sync.entityRevisions) { _, _ in
                 Task { await reload() }
             }
+        }
+    }
+
+    private func downloadSelected() async {
+        bundling = true
+        defer { bundling = false }
+        do {
+            bundleURL = try await store.bundleFiles(ids: Array(selectedIds))
+            selecting = false
+            selectedIds = []
+            showBundleShare = true
+        } catch {
+            errorMessage = (error as? APIError)?.errorDescription ?? "Couldn't bundle files."
         }
     }
 
@@ -173,6 +215,10 @@ struct FilesView: View {
     // ── All-files row ──
     private func fileRow(_ file: AppFileItem, showDivider: Bool) -> some View {
         HStack(spacing: 13) {
+            if selecting {
+                Image(systemName: selectedIds.contains(file.id) ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20)).foregroundStyle(selectedIds.contains(file.id) ? SCColor.primary : SCColor.text4)
+            }
             FileBadgeView(mime: file.mimeType, size: 40)
             VStack(alignment: .leading, spacing: 3) {
                 Text(file.name).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(SCColor.text).lineLimit(1)
@@ -186,12 +232,23 @@ struct FilesView: View {
                 }
             }
             Spacer()
-            visibilityPill(file.isPublic)
-            Image(systemName: "chevron.right").font(.system(size: 14)).foregroundStyle(SCColor.text4)
+            if !selecting {
+                visibilityPill(file.isPublic)
+                Image(systemName: "chevron.right").font(.system(size: 14)).foregroundStyle(SCColor.text4)
+            }
         }
         .padding(.horizontal, 16).padding(.vertical, 13)
         .contentShape(Rectangle())
-        .onTapGesture { router.sheet = .filePreview(file) }
+        .onTapGesture {
+            if selecting {
+                if selectedIds.contains(file.id) { selectedIds.remove(file.id) } else { selectedIds.insert(file.id) }
+            } else {
+                router.sheet = .filePreview(file)
+            }
+        }
+        .onLongPressGesture {
+            if !selecting { selecting = true; selectedIds = [file.id] }
+        }
         .overlay(alignment: .bottom) { if showDivider { Divider().opacity(0.5).padding(.leading, 16) } }
     }
 

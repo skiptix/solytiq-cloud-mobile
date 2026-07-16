@@ -69,6 +69,13 @@ extension DataStore {
         return try await filesAPI.download(id: file.id, fileName: file.name, serverBaseURL: url, token: token)
     }
 
+    /// §5.2 — server-side zip of several files, returned as a local temp file.
+    func bundleFiles(ids: [String]) async throws -> URL {
+        guard isServer, let url = appState.serverURL else { throw APIError.notConnected }
+        let token = KeychainStore.get(KeychainStore.Key.authToken)
+        return try await filesAPI.bundle(ids: ids, serverBaseURL: url, token: token)
+    }
+
     // MARK: Templates
     //
     // Server-side snapshots of a full list/timeline structure (`/api/templates`).
@@ -124,6 +131,18 @@ extension DataStore {
         "You are Sol, the helpful AI assistant built into Solytiq Cloud, a self-hosted productivity suite. Help the user with their tasks, lists, timelines and schedule. Be concise and friendly."
     }
 
+    /// §7 — uploads a file into the chat session for context, creating the
+    /// session first if one doesn't exist yet. Returns the session id used.
+    func uploadAIFile(sessionId: String?, fileName: String, mimeType: String, data: Data) async throws -> String {
+        guard isServer, let url = appState.serverURL else { throw APIError.notConnected }
+        let sid: String
+        if let sessionId { sid = sessionId } else { sid = try await aiAPI.createSession() }
+        let token = KeychainStore.get(KeychainStore.Key.authToken)
+        try await aiAPI.uploadFile(sessionId: sid, fileName: fileName, mimeType: mimeType, data: data,
+                                   serverBaseURL: url, token: token)
+        return sid
+    }
+
     /// Loads a session's persisted transcript (used when reopening the chat).
     func aiHistory(sessionId: String) async -> [AppChatMessage] {
         guard isServer else { return [] }
@@ -149,9 +168,32 @@ extension DataStore {
                 .map { AIAPI.ChatMessage(role: $0.role, content: $0.content) }
             wire.append(AIAPI.ChatMessage(role: "user", content: content))
 
-            // Persist the user turn, then ask for the reply, then persist it.
+            // Persist the user turn, then run the request/execute/respond loop.
             await aiAPI.saveMessage(sessionId: sid, role: "user", content: content)
-            let replyText = try await aiAPI.chat(sessionId: sid, messages: wire)
+
+            // §7 — fetch the server-side data-tool registry (empty when the
+            // instance doesn't expose one, in which case this behaves exactly
+            // like a plain chat).
+            let tools = await aiAPI.tools()
+
+            var replyText = ""
+            // Bounded so a misbehaving model can't loop forever.
+            for _ in 0..<6 {
+                let result = try await aiAPI.chat(sessionId: sid, messages: wire, tools: tools)
+                if result.toolCalls.isEmpty {
+                    replyText = result.content
+                    break
+                }
+                // Record the assistant's tool-call turn, then execute each tool
+                // server-side and feed the results back in.
+                wire.append(AIAPI.ChatMessage(role: "assistant", content: result.content, toolCalls: result.toolCalls))
+                for call in result.toolCalls {
+                    let output = await aiAPI.execute(toolName: call.function.name, argumentsJSON: call.function.arguments)
+                    wire.append(AIAPI.ChatMessage(role: "tool", content: output,
+                                                  name: call.function.name, toolCallId: call.id))
+                }
+            }
+            if replyText.isEmpty { replyText = "…" }
             await aiAPI.saveMessage(sessionId: sid, role: "assistant", content: replyText)
 
             return (sid, AppChatMessage(role: "assistant", content: replyText))
