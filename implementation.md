@@ -4,13 +4,18 @@ Source: [changes.md](changes.md). This file breaks every gap identified there in
 
 Each section lists: the backend surface it talks to (already exists on the server — nothing here requires backend work), the mobile files to add/change, and the concrete steps. Sections are ordered roughly by dependency and effort (cheap/foundational first, large standalone domains last).
 
+> **Out of scope for mobile.** The following are intentionally **not** part of the mobile app and have been removed from this plan — the section numbers are left with gaps rather than renumbered so existing cross-references stay valid:
+> - **§8 GPS / Route Planner** — web-only.
+> - **§11 App Directory ("Discover Apps")** — instance-wide app install/uninstall stays a web/admin concern; mobile does no install-state gating.
+> - **§13 Admin capabilities** — user/API-key/instance-settings management, admin password reset, and Nuke all stay on web.
+
 ---
 
 ## 0. Conventions to follow throughout
 
 - New API clients go in `Networking/<Domain>API.swift`, mirroring existing files (`static let shared`/`APIClient`-based, `async throws` methods returning DTOs).
 - New wire types go in `DTO/APIModels.swift` as `APIXxxDTO: Codable`; new UI-facing types go in `Models/DomainModels.swift` as `AppXxx: Identifiable, Codable, Hashable`; mapping between them belongs in `Models/PersistedModels+Mapping.swift`.
-- Anything that must work offline needs a SwiftData persisted model in `Models/PersistedModels.swift` plus sync support in `Repositories/DataStore+*.swift` and `SyncEngine.swift` (bootstrap fetch + delta channel + SSE nudge handling). Anything explicitly server-only (Admin API, MCP/OAuth, Automations editor, GPS routing calls) can skip local persistence and just hit the network live, same pattern as `AIAPI`.
+- Anything that must work offline needs a SwiftData persisted model in `Models/PersistedModels.swift` plus sync support in `Repositories/DataStore+*.swift` and `SyncEngine.swift` (bootstrap fetch + delta channel + SSE nudge handling). Anything explicitly server-only (MCP/OAuth, Automations editor) can skip local persistence and just hit the network live, same pattern as `AIAPI`.
 - New screens go in `Screens/<Domain>/`, new modals in `Sheets/`, new top-level destinations get added to `Router.swift` (`SheetRoute` / `ListsRoute` enums) and, if they need their own tab, `MainTab` in `Router.swift` + `MainTabView.swift` + `GlassTabBar.swift`.
 - Every new entity type needs `checked`/list of fields to exactly match the server DTO shape documented in `CLAUDE.md`'s Core Data Model table (see `changes.md` §1–§3 for the field-level deltas already identified).
 
@@ -58,7 +63,7 @@ Each section lists: the backend surface it talks to (already exists on the serve
 - UI: add an "Attachments" section to `EditTaskSheet.swift` — thumbnail/file-icon row, a "+" to upload new or pick from existing Files (reuse `FilesView`'s file list as a picker), tap to preview via the existing `FilePreviewSheet.swift`, swipe/long-press to delete.
 
 ### 1.6 List/folder archiving
-- Backend: `PUT /api/lists/:listId/unarchive`; archived lists are excluded from `GET /api/lists` unless `?archived=true`; `archive_list` is otherwise only reachable via an Automation action on web, but nothing stops a plain "archive" mutation from being exposed directly — check whether `lists.ts` has a direct archive route besides the automation action; if not, add archiving to the mobile roadmap as **read/restore only** (list `GET /api/lists?archived=true` + `PUT /:listId/unarchive`) since there's no confirmed direct "archive" write route outside the Automation Hub (§8) — verify against `backend/src/routes/lists.ts` before implementing the write side.
+- Backend: `PUT /api/lists/:listId/unarchive`; archived lists are excluded from `GET /api/lists` unless `?archived=true`; `archive_list` is otherwise only reachable via an Automation action on web, but nothing stops a plain "archive" mutation from being exposed directly — check whether `lists.ts` has a direct archive route besides the automation action; if not, add archiving to the mobile roadmap as **read/restore only** (list `GET /api/lists?archived=true` + `PUT /:listId/unarchive`) since there's no confirmed direct "archive" write route outside the Automation Hub (§10) — verify against `backend/src/routes/lists.ts` before implementing the write side.
 - Add `isArchived: Bool` to `APIListDTO`/`AppList`.
 - New `Sheets/ArchivedSheet.swift` mirroring `TrashSheet.swift`'s structure: list of archived lists, "Unarchive" action per row. Add `.archived` case to `Router.SheetRoute`, surface an entry point next to Trash in Settings or a list's action menu.
 
@@ -154,33 +159,6 @@ Each section lists: the backend surface it talks to (already exists on the serve
 
 ---
 
-## 8. GPS / Route Planner (new domain — largest single item)
-
-This is the single biggest gap. Treat as its own multi-week workstream.
-
-### 8.1 Networking
-- New `Networking/GPSAPI.swift` covering all of `routes/gps.ts`:
-  - `list()`, `upload(fileName:data:)` (GPX/FIT), `data(id:)` (parsed track points), `smooth(id:)`/`smoothSave(id:)`, `rename(id:name:)`, `new()` (blank route), `combine(ids:)`, `download(id:)`, `updatePoints(id:points:)`, `updateRouteState(id:state:)`, `delete(id:)`, `route(points:)` (Valhalla snapping/routing proxy), `pois(bbox:)` (Overpass POI search).
-- New DTOs: `APIGpsFileDTO`, `APIGpsTrackDataDTO`, `APIRouteStateDTO` (mirror `GpsRouteStateV1` and friends from web's `types.ts`: control points, routed/off-grid spans, POI markers, named pins, course points).
-- New domain models: `AppGpsFile`, `AppGpsTrack`, `AppRouteState` in `DomainModels.swift`.
-
-### 8.2 Map rendering
-- Web uses Leaflet; iOS equivalent is **MapKit** (`Map`/`MKMapView` via SwiftUI's `Map` view, iOS 17+ `MapContentBuilder`). This is a from-scratch reimplementation, not a port — plan for:
-  - Track polyline rendering (`MapPolyline`).
-  - Draggable control points / route editing overlays (custom `Annotation`s with drag gestures).
-  - POI markers from the Overpass search results.
-  - Smoothing/decimation is a pure-data operation (server already does it via `smooth`/`smooth-save`) — no client math needed beyond calling the endpoint.
-
-### 8.3 Screens
-- `Screens/GPS/GPSListView.swift` — file list, upload button (`.fileImporter` for `.gpx`/`.fit`), rename/delete/combine actions. Mirrors `GPSScreen.tsx`.
-- `Screens/GPS/GPSEditView.swift` — the map editor: load track, edit route state, save. Mirrors `GPSEditScreen.tsx`.
-- Add a `.gps` case to `MainTab` (or nest under an "Apps" tab if the App Directory gating pattern from §11 is adopted) plus a router entry.
-
-### 8.4 App Directory gating
-- Backend gates GPS behind `requireAppInstalled('gps')` (installed instance-wide via web's Settings → System). Add a check: `AuthAPI.featureFlags()` or a new `AppsAPI.installed()` call, and hide the GPS tab/entry point if not installed for this instance (same for Files/MCP/Automations if those apps are ever uninstalled — check `apps.ts`'s `GET /api/apps` response shape for "installed" state per app id).
-
----
-
 ## 9. Markdown Lists (new domain)
 
 - Backend: `markdownLists.ts` — `GET /`, `GET /:id`, `POST /`, `PUT /:id`, `DELETE /:id`, `PUT /:id/share`, `POST /:id/images`, `GET /:id/images/:imageId`.
@@ -207,15 +185,7 @@ Given the complexity documented in `CLAUDE.md` (flow-chart graph model, sandboxe
 - `Screens/Automations/AutomationEditorView.swift` — **vertical step-card list**: one card for the trigger (dropdown: `task_completed`/`list_all_completed`/`task_created`/`schedule`), then N action cards in order (add/remove/reorder via up/down or drag), each rendering its `paramsSchema` as a form (reuse a generic schema-driven form renderer — text fields, dropdowns for `isListId`/`isFolderId`/`isWorkspaceId` params populated from already-loaded lists/folders/workspaces, key-value repeatable rows for the HTTP action's headers/query params, a code editor `TextEditor` for the `code` action).
 - Per-card "Test" button calling `test(id:nodeId:)`, showing the result inline (skip the desktop-only drag-and-drop field-picker/`JsonTree` — a mobile-appropriate simplification is to show the Input/Output JSON as a collapsible read-only tree using a basic recursive `DisclosureGroup`).
 - Run History: a simple list of `AppAutomationRun` (status badge, timestamp, tap to expand steps).
-- Gate the tab/entry point behind the App Directory `automations` install flag, same as §8.4.
-
----
-
-## 11. App Directory ("Discover Apps" state)
-
-- Backend: `apps.ts` — `GET /` (catalog + installed state), `POST /:appId/install`, `POST /:appId/uninstall`.
-- New `Networking/AppsAPI.swift`: `list()`, `install(appId:)`, `uninstall(appId:)`.
-- Mobile likely doesn't need an *install/uninstall* UI (that's an admin, instance-wide action better left to web per §13's admin-parity decision below) — but it **does** need to **read** installed state to correctly show/hide the GPS/Automations tabs (§8.4, §10.2) and the MCP/token screen (§14 — only relevant if `mcp` is installed).
+- Surface the tab/entry point whenever connected to a server (no App Directory install gating on mobile — that catalog is web-only).
 
 ---
 
@@ -223,36 +193,8 @@ Given the complexity documented in `CLAUDE.md` (flow-chart graph model, sandboxe
 
 - Backend: `caldavManage.ts` — `GET /api/caldav` (status), `POST /api/caldav/password` (generate/regenerate app password), `DELETE /api/caldav` (revoke).
 - Add `Networking/CalDAVAPI.swift`: `status()`, `generatePassword()`, `revoke()`.
-- New section in `SettingsView.swift` ("Calendar Sync", mirrors web's `UserSettingsModal` tab): show connection status, a "Generate App Password" button that displays the CalDAV URL + generated password once (with a copy button, since — like the admin API key — it's shown only once), and a "Revoke" action.
+- New section in `SettingsView.swift` ("Calendar Sync", mirrors web's `UserSettingsModal` tab): show connection status, a "Generate App Password" button that displays the CalDAV URL + generated password once (with a copy button, since it's shown only once), and a "Revoke" action.
 - The actual CalDAV *subscription* itself is consumed by iOS's native Calendar app (Settings → Calendar → Accounts → Add CalDAV Account), not by this app — mobile's job here is only exposing the credential management screen so a user can set up that native subscription. Add a short in-app instructional note with the server's `/caldav` URL, similar to how the web surfaces it.
-
----
-
-## 13. Admin capabilities
-
-Decide scope deliberately here — the web admin surface is large (users, API keys, instance settings, storage/system stats, Nuke). Recommend implementing **read + safe-write** admin features natively and treating the two irreversible/high-risk ones (Nuke, and possibly bulk user deletion) as "open in web" deep links rather than native flows, to avoid a destructive action being one mis-tap away on a phone. Confirm this scoping decision with the user before building the risky half.
-
-### 13.1 User management
-- Backend: `admin.ts` — `GET/POST /users`, `PUT/DELETE /users/:id`.
-- Add `AdminAPI.swift`: `listUsers()`, `createUser()`, `updateUser(id:)`, `deleteUser(id:)`.
-- Extend `SettingsView.swift`'s existing (currently read-only) `usersSection` into a full management screen (`Screens/Settings/AdminUsersView.swift`) for admins: create user, edit username/password/fullName/isAdmin, delete (with confirmation).
-
-### 13.2 Admin API key management
-- Backend: `admin.ts` — `GET/POST /api-keys`, `DELETE /api-keys/:id`.
-- Add `AdminAPI` methods: `listApiKeys()`, `createApiKey(name:scopes:)`, `revokeApiKey(id:)`.
-- New `Sheets/AdminApiKeyWizardSheet.swift` (mirrors web's `AdminApiKeyWizard.tsx`): name + scope toggles (`read/users/workspaces/folders/lists/timelines/meetings`), generate, show the secret once with a copy button, list existing keys with revoke.
-
-### 13.3 Instance settings
-- Backend: `admin.ts` — `GET/PUT /settings` (AI model/enabled, 2FA feature gate, storage quota, mobile-app kill switch), `GET /ai/usage`, `GET /system/storage`.
-- Add `AdminAPI.getSettings()`, `updateSettings()`, `aiUsage()`, `systemStorage()`.
-- New `Screens/Settings/AdminInstanceSettingsView.swift` replacing the current static "more settings are on web" message for admin users, with actual editable controls plus read-only usage/storage stat displays.
-
-### 13.4 Admin password reset flow
-- Backend: `auth.ts` — `POST /admin-password-reset/request`, `POST /admin-password-reset/confirm`.
-- This is a *pre-login* recovery flow (an admin resets another user's password out-of-band). Add to `ConnectServerView.swift`'s login step: a "Forgot password?" link triggering the request/confirm flow, mirroring `AdminPasswordResetScreen.tsx`.
-
-### 13.5 Nuke
-- Recommend **not** implementing natively (destructive, instance-wide, no undo). If pursued anyway per user direction, gate hard behind admin + a typed-confirmation phrase, exactly like the web screen does, and treat as its own reviewed change — do not bundle with other admin work.
 
 ---
 
@@ -296,9 +238,9 @@ Decide scope deliberately here — the web admin surface is large (users, API ke
 
 `SyncEngine.swift`'s bootstrap/delta model needs to know about every new syncable entity added above so changes propagate across devices/the web app in real time, not just on next full bootstrap:
 
-- Extend `SyncAPI.bootstrap`/`delta` response handling (and the corresponding backend `sync.ts` payload — confirm it already includes GPS files/markdown lists/automations/attachments as SIGNAL or PATCH entities per `CLAUDE.md`'s "automation is a SIGNAL sync entity" note) for: task/milestone attachments, markdown lists, GPS files, automations.
+- Extend `SyncAPI.bootstrap`/`delta` response handling (and the corresponding backend `sync.ts` payload — confirm it already includes markdown lists/automations/attachments as SIGNAL or PATCH entities per `CLAUDE.md`'s "automation is a SIGNAL sync entity" note) for: task/milestone attachments, markdown lists, automations.
 - For entities documented as **SIGNAL** sync type (refetch-on-bump rather than patch-in-place — automations and templates are called out explicitly in `CLAUDE.md`), mirror that in `DataStore`: on the relevant `entityRevisions.*` bump via SSE, trigger a full refetch of that domain's list rather than trying to patch it in place, exactly like automations/templates behave on web.
-- Add SwiftData persisted models (`Models/PersistedModels.swift`) + mapping only for entities that should work offline in "local mode" — likely tasks/lists/folders/timelines/meetings/files stay as-is, while GPS/Automations/MCP tokens/Admin data are reasonably **server-mode only** (no offline story needed, matching that they're inherently server-dependent features even on web).
+- Add SwiftData persisted models (`Models/PersistedModels.swift`) + mapping only for entities that should work offline in "local mode" — likely tasks/lists/folders/timelines/meetings/files stay as-is, while Automations/MCP tokens data are reasonably **server-mode only** (no offline story needed, matching that they're inherently server-dependent features even on web).
 
 ---
 
@@ -310,7 +252,5 @@ Decide scope deliberately here — the web admin surface is large (users, API ke
 4. §7 (AI tool-calling) — moderate effort, high visible value.
 5. §15 (Search) — self-contained, moderate effort.
 6. §9 (Markdown Lists) — new domain, moderate effort.
-7. §11 (App Directory read) — small, needed as a prerequisite gate for #8 and #10.
-8. §8 (GPS/Route Planner) and §10 (Automation Hub) — largest items, plan as dedicated workstreams.
-9. §13 (Admin) — scope-confirm the Nuke/destructive-action question with the user first, then build the rest.
-10. §16 (Public share viewing) — depends on a backend/nginx Universal Links config decision; coordinate before starting.
+7. §10 (Automation Hub) — largest remaining item, plan as a dedicated workstream.
+8. §16 (Public share viewing) — depends on a backend/nginx Universal Links config decision; coordinate before starting.
